@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITSM — Incident & Release Management</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --color-background-primary:#ffffff;
+    --color-background-secondary:#f5f4f0;
+    --color-background-tertiary:#eeede9;
+    --color-background-info:#e6f1fb;
+    --color-background-success:#eaf3de;
+    --color-background-warning:#faeeda;
+    --color-background-danger:#fcebeb;
+    --color-text-primary:#2c2c2a;
+    --color-text-secondary:#5f5e5a;
+    --color-text-tertiary:#888780;
+    --color-text-info:#185fa5;
+    --color-text-success:#3b6d11;
+    --color-text-warning:#854f0b;
+    --color-text-danger:#a32d2d;
+    --color-border-tertiary:rgba(44,44,42,0.15);
+    --color-border-secondary:rgba(44,44,42,0.3);
+    --border-radius-md:8px;
+    --border-radius-lg:12px;
+    --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --color-background-primary:#1e1e1c;
+      --color-background-secondary:#2a2a28;
+      --color-background-tertiary:#242422;
+      --color-background-info:#042c53;
+      --color-background-success:#173404;
+      --color-background-warning:#412402;
+      --color-background-danger:#501313;
+      --color-text-primary:#e8e6dc;
+      --color-text-secondary:#b4b2a9;
+      --color-text-tertiary:#888780;
+      --color-text-info:#85b7eb;
+      --color-text-success:#97c459;
+      --color-text-warning:#ef9f27;
+      --color-text-danger:#f09595;
+      --color-border-tertiary:rgba(232,230,220,0.12);
+      --color-border-secondary:rgba(232,230,220,0.25);
+    }
+  }
+  body{font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary);background:var(--color-background-tertiary);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+  /* TOP BAR */
+  #topbar{height:52px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:10}
+  .logo{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px}
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:#185FA5}
+  .tagline{font-size:11px;color:var(--color-text-secondary);margin-left:4px}
+  .spacer{flex:1}
+  #db-status{font-size:10px;padding:3px 8px;border-radius:10px;background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+  #db-status.ok{background:var(--color-background-success);color:var(--color-text-success)}
+  #db-status.err{background:var(--color-background-danger);color:var(--color-text-danger)}
+  .top-badge{font-size:11px;padding:3px 8px;border-radius:10px;background:var(--color-background-danger);color:var(--color-text-danger);cursor:pointer}
+  .user-label{font-size:12px;color:var(--color-text-secondary)}
+
+  /* LAYOUT */
+  #layout{display:flex;flex:1;overflow:hidden}
+
+  /* SIDEBAR */
+  nav{width:220px;background:var(--color-background-primary);border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+  nav .section-title{font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.08em;padding:16px 16px 6px}
+  nav a{display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;border-left:2px solid transparent;transition:background .1s}
+  nav a:hover{background:var(--color-background-secondary)}
+  nav a.active{color:var(--color-text-primary);background:var(--color-background-secondary);border-left:2px solid #185FA5;font-weight:500}
+  .nav-icon{width:16px;text-align:center;font-size:12px;flex-shrink:0}
+
+  /* MAIN */
+  #main{flex:1;overflow-y:auto;padding:20px}
+  .page{display:none}.page.active{display:block}
+  .page-title{font-size:18px;font-weight:500;margin-bottom:16px}
+
+  /* CARDS */
+  .card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px 20px;margin-bottom:16px}
+  .card-title{font-size:13px;font-weight:500;margin-bottom:12px;color:var(--color-text-secondary)}
+  .row{display:flex;gap:12px}
+  .col-6{flex:1;min-width:0}.col-8{flex:2;min-width:0}.col-4{flex:1;min-width:0}
+
+  /* KPI */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  .kpi{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px}
+  .kpi .label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
+  .kpi .value{font-size:22px;font-weight:500}
+  .kpi .sub{font-size:10px;color:var(--color-text-tertiary);margin-top:2px}
+  .kpi.good .value{color:var(--color-text-success)}
+  .kpi.warn .value{color:var(--color-text-warning)}
+  .kpi.bad  .value{color:var(--color-text-danger)}
+  .sla-bar{height:4px;border-radius:2px;background:var(--color-background-tertiary);margin-top:4px;overflow:hidden}
+  .sla-fill{height:100%;border-radius:2px}
+
+  /* BADGES */
+  .b{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+  .bp1{background:#FCEBEB;color:#A32D2D}.bp2{background:#FAEEDA;color:#854F0B}.bp3{background:#E6F1FB;color:#185FA5}
+  .bopen{background:#E6F1FB;color:#185FA5}.bclosed{background:#EAF3DE;color:#3B6D11}.binprog{background:#EEEDFE;color:#534AB7}
+  .bok{background:#EAF3DE;color:#3B6D11}.bwarn{background:#FAEEDA;color:#854F0B}
+  .brh{background:#FCEBEB;color:#A32D2D}.brm{background:#FAEEDA;color:#854F0B}.brl{background:#EAF3DE;color:#3B6D11}
+  .bstd{background:#EEEDFE;color:#534AB7}.bemrg{background:#FCEBEB;color:#A32D2D}.bnorm{background:#E6F1FB;color:#185FA5}
+
+  /* TABLE */
+  table.dt{width:100%;border-collapse:collapse;font-size:12px}
+  table.dt th{text-align:left;padding:7px 10px;background:var(--color-background-secondary);color:var(--color-text-secondary);font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)}
+  table.dt td{padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle}
+  table.dt tr:last-child td{border-bottom:none}
+  table.dt tr.clickable{cursor:pointer}
+  table.dt tr.clickable:hover td{background:var(--color-background-secondary)}
+
+  /* FORMS */
+  .fg{margin-bottom:14px}
+  .fl{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:5px;display:block}
+  .fl .req{color:var(--color-text-danger)}
+  input[type=text],select,textarea{width:100%;padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;font-family:inherit}
+  textarea{resize:vertical;min-height:60px}
+  input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:#185FA5}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:12px;cursor:pointer;font-family:inherit;transition:background .1s}
+  .btn:hover{background:var(--color-background-secondary)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.primary{background:#185FA5;color:#fff;border-color:#185FA5}.btn.primary:hover{background:#0C447C}
+  .btn.danger{background:#A32D2D;color:#fff;border-color:#A32D2D}
+  .btn.sm{padding:4px 10px;font-size:11px}
+
+  /* DETAIL PANEL */
+  #dp{position:fixed;top:0;right:-460px;width:460px;height:100vh;background:var(--color-background-primary);border-left:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;transition:right .25s ease;z-index:100;overflow-y:auto}
+  #dp.open{right:0}
+  .dp-hdr{padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--color-background-primary);z-index:1}
+  .dp-hdr-title{font-size:14px;font-weight:500}
+  .dp-close{cursor:pointer;font-size:18px;color:var(--color-text-secondary)}
+  .dp-body{padding:16px 20px}
+
+  /* TRACE CHAIN */
+  .trace-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .tn{padding:5px 10px;border-radius:var(--border-radius-md);font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid var(--color-border-tertiary)}
+  .tn:hover{opacity:.8}
+  .ta{color:var(--color-text-tertiary);font-size:10px}
+
+  /* STEPS */
+  .steps{display:flex;margin:12px 0}
+  .step{flex:1;text-align:center;font-size:10px;padding:6px 4px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border:0.5px solid var(--color-border-tertiary);position:relative}
+  .step:not(:last-child):after{content:'›';position:absolute;right:-7px;top:50%;transform:translateY(-50%);z-index:1;color:var(--color-text-tertiary)}
+  .step.done{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
+  .step.active{background:#E6F1FB;color:#185FA5;border-color:#B5D4F4;font-weight:500}
+  .step:first-child{border-radius:var(--border-radius-md) 0 0 var(--border-radius-md)}
+  .step:last-child{border-radius:0 var(--border-radius-md) var(--border-radius-md) 0}
+
+  /* TIMELINE */
+  .tl{list-style:none;padding:0}
+  .tl li{display:flex;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .tl li:last-child{border-bottom:none}
+  .tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+  .tl-time{font-size:10px;color:var(--color-text-tertiary);min-width:90px;flex-shrink:0}
+  .tl-text{font-size:12px}
+
+  /* RCA */
+  .rca-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .rca-btn{padding:8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:12px;cursor:pointer;text-align:center;font-family:inherit}
+  .rca-btn.active{border-color:#185FA5;background:#E6F1FB;color:#185FA5;font-weight:500}
+
+  /* LOG MONITOR */
+  .code-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:16px}
+  .code-card{border-radius:var(--border-radius-md);padding:10px 12px;text-align:center}
+  .code-card .cc-code{font-size:18px;font-weight:500}
+  .code-card .cc-count{font-size:22px;font-weight:500;margin:2px 0}
+  .code-card .cc-label{font-size:10px;opacity:.8}
+  .c2xx{background:#EAF3DE;color:#3B6D11}
+  .c3xx{background:#E6F1FB;color:#185FA5}
+  .c4xx{background:#FAEEDA;color:#854F0B}
+  .c5xx{background:#FCEBEB;color:#A32D2D}
+  .cother{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .log-path-row{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  .log-path-row input{flex:1}
+  .refresh-indicator{font-size:11px;color:var(--color-text-tertiary)}
+  #countdown{font-weight:500;color:var(--color-text-info)}
+  .log-alert{padding:8px 12px;border-radius:var(--border-radius-md);font-size:12px;margin-bottom:10px;display:none}
+  .log-alert.show{display:block}
+  .log-alert.warn{background:#FAEEDA;color:#854F0B}
+  .log-alert.danger{background:#FCEBEB;color:#A32D2D}
+  .log-alert.info{background:#E6F1FB;color:#185FA5}
+  .mini-bars{display:flex;align-items:flex-end;gap:5px;height:70px}
+  .mini-bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1}
+  .mini-bar{width:100%;border-radius:3px 3px 0 0}
+  .mini-bar-lbl{font-size:9px;color:var(--color-text-tertiary);margin-top:3px}
+
+  /* SECTION HEADING */
+  .sh{font-size:13px;font-weight:500;color:var(--color-text-secondary);margin:12px 0 8px;padding-bottom:6px;border-bottom:0.5px solid var(--color-border-tertiary)}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:20px;right:20px;background:#2C2C2A;color:#fff;padding:10px 16px;border-radius:var(--border-radius-md);font-size:12px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:300;max-width:340px}
+  #toast.show{opacity:1}
+
+  /* LOADING SPINNER */
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--color-border-secondary);border-top-color:#185FA5;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo"><div class="dot"></div>ITSM<span style="font-weight:400;color:var(--color-text-secondary)"></span></div>
+  <span class="tagline">Incident &amp; Release Management </span>
+  <div class="spacer"></div>
+  <div id="db-status">⬤ Verbinde…</div>
+  <div id="alert-badge" class="top-badge" onclick="showPage('incidents')" style="display:none"></div>
+  <div class="user-label">Manuel Houzar · Service Manager</div>
+</div>
+
+<div id="layout">
+<nav>
+  <span class="section-title">Übersicht</span>
+  <a class="active" onclick="showPage('dashboard')" id="nav-dashboard"><span class="nav-icon">◉</span>Dashboard</a>
+
+  <span class="section-title">Release Management</span>
+  <a onclick="showPage('releases')" id="nav-releases"><span class="nav-icon">▷</span>Releases</a>
+  <a onclick="showPage('new-release')" id="nav-new-release"><span class="nav-icon">＋</span>Neuer Release</a>
+
+  <span class="section-title">Incident Management</span>
+  <a onclick="showPage('incidents')" id="nav-incidents"><span class="nav-icon">⚑</span>Incidents</a>
+  <a onclick="showPage('new-incident')" id="nav-new-incident"><span class="nav-icon">＋</span>Neuer Incident</a>
+  <a onclick="showPage('rca')" id="nav-rca"><span class="nav-icon">◎</span>RCA / Problem</a>
+
+  <span class="section-title">Service-Übersicht</span>
+  <a onclick="showPage('services')" id="nav-services"><span class="nav-icon">◈</span>Services</a>
+  <a onclick="showPage('infra')" id="nav-infra"><span class="nav-icon">⬡</span>Infrastruktur</a>
+  <a onclick="showPage('traceability')" id="nav-traceability"><span class="nav-icon">↔</span>Traceability E2E</a>
+  <a onclick="showPage('kpis')" id="nav-kpis"><span class="nav-icon">▣</span>KPI-Dashboard</a>
+
+  <span class="section-title">Monitoring</span>
+  <a onclick="showPage('logmonitor')" id="nav-logmonitor"><span class="nav-icon">▤</span>Log-Monitor</a>
+
+  <span class="section-title">Schulung</span>
+  <a onclick="showPage('schulung')" id="nav-schulung"><span class="nav-icon">▶</span>ITSM Schulungsbereich</a>
+</nav>
+
+<div id="main">
+
+<!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+<div id="page-dashboard" class="page active">
+  <div class="page-title">Dashboard</div>
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi bad"><div class="label">Offene P1-Incidents</div><div class="value" id="kpi-p1">—</div><div class="sub">aus Datenbank</div></div>
+    <div class="kpi warn"><div class="label">Releases nächste 2 Tage</div><div class="value" id="kpi-upcoming">—</div><div class="sub" id="kpi-upcoming-names">geplant auf PROD</div></div>
+    <div class="kpi good"><div class="label">Release-Erfolgsrate</div><div class="value" id="kpi-rel">—</div><div class="sub">Aus DB berechnet</div></div>
+    <div class="kpi good"><div class="label">MTTR (Ø)</div><div class="value" id="kpi-mttr">—</div><div class="sub">Ziel: &lt; 60 min</div></div>
+  </div>
+  <div class="card" id="upcoming-banner" style="margin-bottom:12px;display:none">
+    <div class="card-title">📅 Geplante Releases — nächste 48 Stunden</div>
+    <div id="upcoming-releases-list"></div>
+  </div>
+  <div class="row">
+    <div class="col-8">
+      <div class="card">
+        <div class="card-title">Aktuelle Incidents <span class="spin" id="dash-spin"></span></div>
+        <table class="dt"><thead><tr><th>ID</th><th>Titel</th><th>Prio</th><th>Status</th><th>Service</th><th>SLA</th></tr></thead>
+        <tbody id="dash-incidents"></tbody></table>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card">
+        <div class="card-title">Incidents nach Prio</div>
+        <div class="mini-bars" id="dash-bars" style="padding-bottom:4px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Nächste Releases</div>
+        <div id="dash-releases" style="font-size:12px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Service-Status</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12px">
+      <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="showPage('services')">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--color-background-info);display:flex;align-items:center;justify-content:center;font-weight:500;color:var(--color-text-info);flex-shrink:0">R</div>
+        <div style="flex:1"><div style="font-weight:500">Release Hub</div><div style="color:var(--color-text-secondary);font-size:11px">App 1 · release_hub</div></div>
+        <span class="b bok">● Online</span>
+      </div>
+      <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="showPage('services')">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--color-background-warning);display:flex;align-items:center;justify-content:center;font-weight:500;color:var(--color-text-warning);flex-shrink:0">O</div>
+        <div style="flex:1"><div style="font-weight:500">Ops Center</div><div style="color:var(--color-text-secondary);font-size:11px">App 2 · ops_center</div></div>
+        <span class="b bok">● Online</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ INCIDENTS LIST ═══════════════════ -->
+<div id="page-incidents" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="page-title" style="margin:0">Incident-Management</div>
+    <button class="btn primary" onclick="showPage('new-incident')">＋ Neuer Incident</button>
+  </div>
+  <div class="card" style="padding:12px 16px;margin-bottom:12px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <select id="f-prio" onchange="loadIncidents()" style="width:130px"><option value="">Alle Prioritäten</option><option>P1</option><option>P2</option><option>P3</option></select>
+      <select id="f-status" onchange="loadIncidents()" style="width:150px"><option value="">Alle Status</option><option>Offen</option><option>In Bearbeitung</option><option>Gelöst</option></select>
+      <select id="f-service" onchange="loadIncidents()" style="width:160px">
+        <option value="">Alle Services</option>
+        <option value="Release Hub">Release Hub</option>
+        <option value="Ops Center">Ops Center</option>
+        <option value="Streaming-API">Streaming-API</option>
+        <option value="Login-Service">Login-Service</option>
+        <option value="DB-Cluster">DB-Cluster</option>
+        <option value="Reporting-Backend">Reporting-Backend</option>
+        <option value="CI/CD-Pipeline">CI/CD-Pipeline</option>
+      </select>
+      <input type="text" id="f-q" placeholder="Freitext suche…" oninput="loadIncidents()" style="width:180px">
+      <span class="spin" id="inc-spin" style="display:none"></span>
+    </div>
+  </div>
+  <div class="card" style="padding:0">
+    <table class="dt"><thead><tr><th>ID</th><th>Titel</th><th>Priorität</th><th>Status</th><th>Verknüpfter Service</th><th>Owner</th><th>SLA</th><th>Release</th></tr></thead>
+    <tbody id="inc-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- ═══════════════════ NEW INCIDENT ═══════════════════ -->
+<div id="page-new-incident" class="page">
+  <div class="page-title">Neuen Incident erfassen</div>
+  <div class="row">
+    <div class="col-8">
+      <div class="card">
+        <div class="card-title">Incident-Daten · FA-IM-01 (Single Point of Entry · gespeichert in SQLite)</div>
+        <div class="fg"><label class="fl">Titel <span class="req">*</span></label><input type="text" id="ni-title" placeholder="Kurze Beschreibung des Vorfalls"></div>
+        <div class="row">
+          <div class="col-6"><div class="fg"><label class="fl">Priorität <span class="req">*</span></label><select id="ni-prio" onchange="updateSLAHint()"><option value="">— wählen —</option><option value="P1">P1 — Kritisch (SLA: 15 min)</option><option value="P2">P2 — Hoch (SLA: 1h)</option><option value="P3">P3 — Mittel (SLA: 4h)</option><option value="P4">P4 — Niedrig (SLA: 8h)</option></select><div id="sla-hint" style="font-size:10px;color:var(--color-text-info);margin-top:4px"></div></div></div>
+          <div class="col-6"><div class="fg"><label class="fl">Service / CI <span class="req">*</span></label><select id="ni-service"><option value="">— wählen —</option><option>Streaming-API</option><option>Login-Service</option><option>DB-Cluster</option><option>Reporting-Backend</option><option>CI/CD-Pipeline</option></select></div></div>
+        </div>
+        <div class="fg"><label class="fl">Beschreibung <span class="req">*</span></label><textarea id="ni-desc" rows="3" placeholder="Detaillierte Beschreibung, Fehlerbild, betroffene Nutzer…"></textarea></div>
+        <div class="row">
+          <div class="col-6"><div class="fg"><label class="fl">Kanal / Quelle</label><select id="ni-kanal"><option>Monitoring-Alert (automatisch)</option><option>Telefon / Hotline</option><option>E-Mail</option><option>Ticket-Portal</option><option>Slack</option></select></div></div>
+          <div class="col-6"><div class="fg"><label class="fl">Verknüpfter Release</label><select id="ni-release"><option value="">— optional —</option></select></div></div>
+        </div>
+        <div class="fg"><label class="fl">Zugewiesenes Team <span class="req">*</span></label><select id="ni-owner"><option>1st Line — Service Desk</option><option>2nd Line — Backend-Team</option><option>3rd Line — Plattform-Team</option></select></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn primary" id="ni-submit" onclick="submitIncident()">Incident anlegen &amp; in DB speichern</button>
+          <button class="btn" onclick="showPage('incidents')">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card"><div class="card-title">Eskalationsregeln · FA-IM-02</div><div style="font-size:12px;color:var(--color-text-secondary)"><div style="padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><strong>P1:</strong> Auto-Eskalation nach 15 min → Major Incident</div><div style="padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><strong>P2:</strong> Eskalation nach 1h Inaktivität</div><div style="padding:6px 0">SLA-Überschreitung → Service Manager benachrichtigt</div></div></div>
+      <div class="card"><div class="card-title">SQLite-Persistenz</div><div style="font-size:12px;color:var(--color-text-secondary)">Alle Änderungen werden sofort in <code>itsm.db</code> geschrieben. Pflichtfelder technisch erzwungen (NFA-01). Audit-Log bei jeder Aktion (C2).</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ RCA ═══════════════════ -->
+<div id="page-rca" class="page">
+  <div class="page-title">Problem-Management &amp; RCA</div>
+  <div class="row">
+    <div class="col-8">
+      <div class="card">
+        <div class="card-title">RCA-Formular · FA-PM-01 — gespeichert in SQLite</div>
+        <div class="fg"><label class="fl">Problem-Typ</label>
+          <div class="rca-btns"><button class="rca-btn active" id="rt-normal" onclick="setRCAType('normal')">Normal Problem</button><button class="rca-btn" id="rt-major" onclick="setRCAType('major')">Major Problem</button></div>
+        </div>
+        <div class="fg"><label class="fl">Zugehöriger Incident <span class="req">*</span></label><select id="rca-inc"><option value="">— wählen —</option></select></div>
+        <div class="fg"><label class="fl">Root Cause <span class="req">*</span></label><textarea id="rca-cause" rows="2" placeholder="Ursache…"></textarea></div>
+        <div class="fg"><label class="fl">Methode</label>
+          <div class="rca-btns"><button class="rca-btn active" id="rm-5why" onclick="setRCAMethod('5why')">5-Why-Analyse</button><button class="rca-btn" id="rm-fish" onclick="setRCAMethod('fish')">Ishikawa</button></div>
+        </div>
+        <div id="rca-5why-block">
+          <div class="fg"><label class="fl">Warum 1?</label><input type="text" id="why1" placeholder="Erste Ursachenebene…"></div>
+          <div class="fg"><label class="fl">Warum 2?</label><input type="text" id="why2"></div>
+          <div class="fg"><label class="fl">Warum 3?</label><input type="text" id="why3"></div>
+        </div>
+        <div id="rca-fish-block" style="display:none">
+          <div class="row">
+            <div class="col-6"><div class="fg"><label class="fl">Mensch</label><input type="text" id="fish-mensch"></div></div>
+            <div class="col-6"><div class="fg"><label class="fl">Maschine</label><input type="text" id="fish-maschine"></div></div>
+            <div class="col-6"><div class="fg"><label class="fl">Methode</label><input type="text" id="fish-methode"></div></div>
+            <div class="col-6"><div class="fg"><label class="fl">Material</label><input type="text" id="fish-material"></div></div>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Lessons Learned / Maßnahmen</label><textarea id="rca-lessons" rows="3" placeholder="Was wird geändert? Owner + Fälligkeit…"></textarea></div>
+        <button class="btn primary" onclick="submitRCA()">RCA in DB speichern &amp; Teams benachrichtigen</button>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card"><div class="card-title">Abgeschlossene RCAs <span class="spin" id="rca-spin"></span></div><ul class="tl" id="rca-list"></ul></div>
+      <div class="card"><div class="card-title">Governance · C2</div><div style="font-size:12px;color:var(--color-text-secondary)">Jede RCA wird mit Zeitstempel in SQLite gespeichert und automatisch an alle betroffenen Teams gesendet. Management-Summary auf Knopfdruck (FA-PM-03).</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ RELEASES LIST ═══════════════════ -->
+<div id="page-releases" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="page-title" style="margin:0">Release-Management</div>
+    <button class="btn primary" onclick="showPage('new-release')">＋ Neuer Release</button>
+  </div>
+  <div class="card" style="padding:0">
+    <table class="dt">
+      <thead><tr><th>ID</th><th>Name</th><th>Typ</th><th>Risiko</th><th>Status</th><th>Service</th><th>Test</th><th>Abnahme</th><th>PROD</th><th>Freigabe</th></tr></thead>
+      <tbody id="rel-tbody"></tbody>
+    </table>
+  </div>
+  <!-- History Panel (expandable) -->
+  <div id="rel-history-panel" style="display:none">
+    <div class="card" style="margin-top:0;border-top:none;border-radius:0 0 var(--border-radius-lg) var(--border-radius-lg)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin:0">History: <span id="rel-history-id"></span></div>
+        <button class="btn sm" onclick="closeRelHistory()">✕ Schließen</button>
+      </div>
+      <ul class="tl" id="rel-history-list"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ NEW RELEASE ═══════════════════ -->
+<div id="page-new-release" class="page">
+  <div class="page-title">Neuen Release anlegen</div>
+  <div class="row">
+    <div class="col-8">
+      <div class="card">
+        <div class="card-title">Release-Lebenszyklus · FA-RM-01</div>
+        <div class="steps"><div class="step active">Erstellung</div><div class="step">Risiko</div><div class="step">Genehmigung</div><div class="step">Einspielung</div><div class="step">Post-Review</div></div>
+        <div style="height:10px"></div>
+        <div class="fg"><label class="fl">Release-Name <span class="req">*</span></label><input type="text" id="nr-name" placeholder="z. B. Auth-Service v3.2.2"></div>
+        <div class="row">
+          <div class="col-6"><div class="fg"><label class="fl">Typ <span class="req">*</span></label><select id="nr-type" onchange="updateRelType()"><option value="">— wählen —</option><option value="Standard">Standard</option><option value="Normal">Normal (CR)</option><option value="Emergency">Emergency</option></select></div></div>
+          <div class="col-6"><div class="fg"><label class="fl">Risikoklasse <span class="req">*</span></label><select id="nr-risk"><option value="">— wählen —</option><option>Niedrig</option><option>Mittel</option><option>Hoch</option></select></div></div>
+        </div>
+        <div class="fg"><label class="fl">Betroffene Services <span class="req">*</span></label>
+          <select id="nr-services" style="width:100%">
+            <option value="">— wählen —</option>
+            <option value="Release Hub">Release Hub (App 1)</option>
+            <option value="Ops Center">Ops Center (App 2)</option>
+            <option value="Release Hub, Ops Center">Release Hub + Ops Center (beide)</option>
+            <option value="Streaming-API">Streaming-API</option>
+            <option value="Login-Service">Login-Service</option>
+            <option value="DB-Cluster">DB-Cluster</option>
+          </select>
+        </div>
+        <!-- Deployment-Dates -->
+        <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px">Geplante Deployment-Termine</div>
+          <div class="row">
+            <div class="col-4"><div class="fg"><label class="fl">Test <span style="color:var(--color-text-tertiary);font-weight:400">(optional)</span></label><input type="text" id="nr-date-test" placeholder="TT.MM.JJJJ"></div></div>
+            <div class="col-4"><div class="fg"><label class="fl">Abnahme <span class="req">*</span></label><input type="text" id="nr-date-abnahme" placeholder="TT.MM.JJJJ"></div></div>
+            <div class="col-4"><div class="fg"><label class="fl">PROD <span class="req">*</span></label><input type="text" id="nr-date-prod" placeholder="TT.MM.JJJJ"></div></div>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Release Notes <span class="req">*</span></label><textarea id="nr-notes" rows="3" placeholder="Änderungsumfang…"></textarea></div>
+        <div class="row">
+          <div class="col-6"><div class="fg"><label class="fl">Rollback-Plan <span class="req">*</span></label><textarea id="nr-rollback" rows="2" placeholder="Wie wird zurückgerollt?"></textarea></div></div>
+          <div class="col-6"><div class="fg"><label class="fl">Testnachweis</label><select id="nr-test"><option>Unit + Integration Tests ✓</option><option>Nur Unit Tests</option><option>Staging-Deployment ✓</option><option>Manuell getestet</option></select></div></div>
+        </div>
+        <div class="fg"><label class="fl">Bekannte Risiken</label><textarea id="nr-risks" rows="2"></textarea></div>
+        <div class="sh" style="margin-top:4px">Planungsdaten</div>
+        <div class="row">
+          <div class="col-4"><div class="fg"><label class="fl">Datum Test <span style="color:var(--color-text-tertiary)">(optional)</span></label><input type="date" id="nr-date-test" style="width:100%;padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px"></div></div>
+          <div class="col-4"><div class="fg"><label class="fl">Datum Abnahme <span class="req">*</span></label><input type="date" id="nr-date-abnahme" style="width:100%;padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px"></div></div>
+          <div class="col-4"><div class="fg"><label class="fl">Datum PROD <span class="req">*</span></label><input type="date" id="nr-date-prod" style="width:100%;padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px"></div></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn primary" onclick="submitRelease()">Release in DB speichern &amp; Workflow starten</button>
+          <button class="btn" onclick="showPage('releases')">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card"><div class="card-title">Freigabe-Workflow · FA-RM-02</div><div style="font-size:12px;color:var(--color-text-secondary)"><div id="nr-type-hint" style="padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:8px">Bitte Typ wählen</div>Alle Freigaben: Zeitstempel + Person + Begründung in SQLite.<br><strong>Keine E-Mail-Genehmigung</strong> (C2, K2)</div></div>
+      <div class="card"><div class="card-title">Pflichtfelder · FA-RM-03</div><div style="font-size:11px;color:var(--color-text-secondary)">Release Notes · Services · Rollback-Plan · Risikoklasse<br>Abnahme-Datum · PROD-Datum<br><span style="color:var(--color-text-danger)">Speichern ohne Pflichtfelder gesperrt</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TRACEABILITY ═══════════════════ -->
+<div id="page-traceability" class="page">
+  <div class="page-title">Traceability E2E</div>
+  <!-- Filter -->
+  <div class="card" style="padding:12px 16px;margin-bottom:12px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:12px;font-weight:500;color:var(--color-text-secondary)">Ansicht:</label>
+      <select id="tr-mode" onchange="loadTraceability()" style="width:180px">
+        <option value="service">Pro Service</option>
+        <option value="incident">Pro Incident</option>
+      </select>
+      <select id="tr-filter" onchange="loadTraceability()" style="width:200px">
+        <option value="">Alle</option>
+        <option value="Release Hub">Release Hub</option>
+        <option value="Ops Center">Ops Center</option>
+      </select>
+      <span class="spin" id="tr-spin" style="display:none"></span>
+    </div>
+  </div>
+  <div id="tr-content"></div>
+</div>
+
+<!-- ═══════════════════ KPI ═══════════════════ -->
+<div id="page-kpis" class="page">
+  <div class="page-title">KPI-Dashboard · C6 Betriebswirkung · C8 Prozessökonomie</div>
+  <div class="kpi-grid">
+    <div class="kpi good"><div class="label">MTTR (Ø)</div><div class="value" id="k-mttr">42 min</div><div class="sub">Ziel: &lt; 60 min ✓</div><div class="sla-bar"><div class="sla-fill" style="width:70%;background:#639922"></div></div></div>
+    <div class="kpi warn"><div class="label">MTBF</div><div class="value">8.2 Tage</div><div class="sub">Ziel: &gt; 10 Tage ⚠</div><div class="sla-bar"><div class="sla-fill" style="width:82%;background:#EF9F27"></div></div></div>
+    <div class="kpi warn"><div class="label">SLA-Erfüllung</div><div class="value" id="k-sla">87%</div><div class="sub">Ziel: ≥ 95% ⚠</div><div class="sla-bar"><div class="sla-fill" style="width:87%;background:#EF9F27"></div></div></div>
+    <div class="kpi good"><div class="label">Release-Erfolgsrate</div><div class="value" id="k-rel">94%</div><div class="sub">Aus DB berechnet ✓</div><div class="sla-bar"><div class="sla-fill" style="width:94%;background:#639922"></div></div></div>
+  </div>
+  <div class="row">
+    <div class="col-6">
+      <div class="card">
+        <div class="card-title">Offene Incidents · FA-KPI-01</div>
+        <div id="kpi-prio-bars" style="font-size:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Prozessökonomie · C8 (Top-2 Literatur)</div>
+        <div style="font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Ø Durchlaufzeit Incident</span><span>3.4 h</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Rework-Rate (Reopen)</span><span style="color:#854F0B" id="k-rework">12%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Ø Übergaben pro Ticket</span><span id="k-handover">1.8</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--color-text-secondary)">Engpass-Queue</span><span style="color:#A32D2D">2nd Line</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="card">
+        <div class="card-title">Datenqualität · C3 (Top-4 Experten)</div>
+        <div style="font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Pflichtfelder vollständig</span><span style="color:#3B6D11;font-weight:500" id="k-dq1">96%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Tickets mit Service-Link</span><span style="color:#3B6D11" id="k-dq2">94%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Releases mit Rollback-Plan</span><span style="color:#3B6D11">100%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--color-text-secondary)">Nächste DQ-Prüfung</span><span>01.04.2026</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Governance-Transparenz · C2</div>
+        <div style="font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Freigaben protokolliert</span><span style="color:#3B6D11">100%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)"><span style="color:var(--color-text-secondary)">Keine E-Mail-Genehmigungen</span><span style="color:#3B6D11">100%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--color-text-secondary)">Audit-Log (SQLite)</span><span style="color:#3B6D11">✓ tamper-evident</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ LOG MONITOR ═══════════════════ -->
+<div id="page-logmonitor" class="page">
+  <div class="page-title">Log-Monitor · HTTP-Code-Analyse</div>
+
+  <div class="card">
+    <div class="card-title">Log-Datei-Konfiguration</div>
+    <div class="log-path-row" style="flex-wrap:wrap;gap:8px">
+      <select id="log-preset" onchange="applyPreset()" style="width:260px;flex-shrink:0">
+        <option value="">— Anwendung wählen —</option>
+        <option value="C:\Users\Manuel\Desktop\FH_Master\Masterarbeit\Implementierung\masterarbeit_mini_apps\masterarbeit_mini_apps\release_hub\logs\app.log">App 1 · Release Hub</option>
+        <option value="C:\Users\Manuel\Desktop\FH_Master\Masterarbeit\Implementierung\masterarbeit_mini_apps\masterarbeit_mini_apps\ops_center\logs\app.log">App 2 · Ops Center</option>
+        <option value="custom">Eigener Pfad…</option>
+      </select>
+      <input type="text" id="log-path" placeholder="Pfad wird automatisch gesetzt" style="font-family:monospace;font-size:12px;flex:1;min-width:200px" readonly>
+      <button class="btn primary" onclick="parseLogs(true)">Jetzt parsen</button>
+      <button class="btn" id="log-toggle" onclick="toggleAutoRefresh()">▶ Auto (2 min)</button>
+    </div>
+    <div id="log-custom-row" style="display:none;margin-bottom:8px">
+      <input type="text" id="log-path-custom" placeholder="Vollständiger Pfad zur Log-Datei…" style="font-family:monospace;font-size:12px;width:100%" oninput="document.getElementById('log-path').value=this.value">
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-secondary)">
+      <span>Formate: nginx/Apache combined · simple bracketed · JSON-Line · beliebige Zeilen mit HTTP-Codes</span>
+      <span class="spacer"></span>
+      <span class="refresh-indicator">Nächste Aktualisierung: <span id="countdown">—</span></span>
+    </div>
+  </div>
+
+  <div id="log-alert" class="log-alert"></div>
+
+  <!-- HTTP CODE SUMMARY CARDS -->
+  <div id="code-grid" class="code-grid"></div>
+
+  <div class="row">
+    <div class="col-6">
+      <div class="card">
+        <div class="card-title">Code-Verteilung (Gruppen)</div>
+        <div class="mini-bars" id="group-bars" style="padding-bottom:4px;align-items:flex-end"></div>
+        <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:8px">2xx = Erfolg · 3xx = Redirect · 4xx = Client-Fehler · 5xx = Server-Fehler</div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="card">
+        <div class="card-title">Letzte Log-Einträge <span id="log-entry-count" style="font-size:11px;color:var(--color-text-tertiary)"></span></div>
+        <div id="log-recent" style="max-height:200px;overflow-y:auto">
+          <div style="font-size:12px;color:var(--color-text-tertiary);padding:8px 0">Noch keine Daten — Log-Pfad eingeben und parsen</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE CHART -->
+  <div class="card">
+    <div class="card-title">Zeitlicher Verlauf · HTTP-Codes (200 / 4xx / 5xx) mit Release-Markierungen</div>
+    <div style="position:relative">
+      <canvas id="log-timeline-chart" height="120"></canvas>
+      <div id="log-timeline-empty" style="font-size:12px;color:var(--color-text-tertiary);padding:20px;text-align:center">Noch keine Daten — Log-Pfad eingeben und parsen</div>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#639922;display:inline-block;border-radius:2px"></span>2xx Erfolg</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#EF9F27;display:inline-block;border-radius:2px"></span>4xx Client-Fehler</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#E24B4A;display:inline-block;border-radius:2px"></span>5xx Server-Fehler</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:2px;height:12px;background:#EF9F27;display:inline-block"></span>Release (PROD)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Alle geparsten Einträge nach Code</div>
+    <table class="dt" id="log-full-table">
+      <thead><tr><th>HTTP-Code</th><th>Methode</th><th>Pfad</th><th>IP</th><th>Zeitstempel</th></tr></thead>
+      <tbody id="log-full-tbody"><tr><td colspan="5" style="color:var(--color-text-tertiary);text-align:center;padding:16px">Noch keine Daten</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════ SERVICES ═══════════════════ -->
+<div id="page-services" class="page">
+  <div class="page-title">Services</div>
+  <div class="row">
+    <!-- SERVICE 1 -->
+    <div class="col-6">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--color-background-info);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--color-text-info);font-weight:500;flex-shrink:0">R</div>
+          <div>
+            <div style="font-size:15px;font-weight:500">Release Hub</div>
+            <div style="font-size:11px;color:var(--color-text-secondary)">App 1 · masterarbeit_mini_apps</div>
+          </div>
+          <div style="margin-left:auto"><span class="b bok">● Online</span></div>
+        </div>
+        <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+          <div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Log-Pfad</span><br><code style="font-size:10px;word-break:break-all">release_hub\logs\app.log</code></div>
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Typ</span><br>Release-Pipeline</div>
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Owner</span><br>2nd Line — Backend-Team</div>
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Offene Incidents</span><br><span id="svc1-inc-count" style="font-weight:500">—</span></div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">HTTP-Codes (Log-Monitor)</div>
+            <div id="svc1-stats" style="font-size:12px;color:var(--color-text-tertiary)">Log-Monitor starten für Live-Daten</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sm primary" onclick="filterAndShow('incidents','Release Hub')">⚑ Incidents</button>
+            <button class="btn sm primary" onclick="filterAndShow('releases','Release Hub')">▷ Releases</button>
+            <button class="btn sm" onclick="showPage('kpis')">▣ KPI-Dashboard</button>
+            <button class="btn sm" onclick="showPage('logmonitor');document.getElementById('log-preset').value=document.getElementById('log-preset').options[1].value;applyPreset()">▤ Log-Monitor</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- SERVICE 2 -->
+    <div class="col-6">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--color-background-warning);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--color-text-warning);font-weight:500;flex-shrink:0">O</div>
+          <div>
+            <div style="font-size:15px;font-weight:500">Ops Center</div>
+            <div style="font-size:11px;color:var(--color-text-secondary)">App 2 · masterarbeit_mini_apps</div>
+          </div>
+          <div style="margin-left:auto"><span class="b bok">● Online</span></div>
+        </div>
+        <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+          <div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Log-Pfad</span><br><code style="font-size:10px;word-break:break-all">ops_center\logs\app.log</code></div>
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Typ</span><br>Operations / Monitoring</div>
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Owner</span><br>3rd Line — Plattform-Team</div>
+            <div><span style="color:var(--color-text-secondary);font-size:11px">Offene Incidents</span><br><span id="svc2-inc-count" style="font-weight:500">—</span></div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">HTTP-Codes (Log-Monitor)</div>
+            <div id="svc2-stats" style="font-size:12px;color:var(--color-text-tertiary)">Log-Monitor starten für Live-Daten</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sm primary" onclick="filterAndShow('incidents','Ops Center')">⚑ Incidents</button>
+            <button class="btn sm primary" onclick="filterAndShow('releases','Ops Center')">▷ Releases</button>
+            <button class="btn sm" onclick="showPage('kpis')">▣ KPI-Dashboard</button>
+            <button class="btn sm" onclick="showPage('logmonitor');document.getElementById('log-preset').value=document.getElementById('log-preset').options[2].value;applyPreset()">▤ Log-Monitor</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Traceability — Services &amp; verknüpfte Elemente</div>
+    <table class="dt">
+      <thead><tr><th>Service</th><th>Offene Incidents</th><th>Letzter Release</th><th>Nächstes PROD-Datum</th><th>Status</th><th>Aktionen</th></tr></thead>
+      <tbody id="svc-inc-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════ INFRASTRUKTUR ═══════════════════ -->
+<div id="page-infra" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="page-title" style="margin:0">Infrastruktur</div>
+    <div style="display:flex;gap:8px">
+      <select id="infra-filter-typ" onchange="loadInfra()" style="width:150px">
+        <option value="">Alle Typen</option>
+        <option>Service</option><option>Firewall</option><option>Loadbalancer</option>
+        <option>Datenbank</option><option>Server</option><option>Monitoring</option>
+        <option>CI/CD</option><option>Netzwerk</option><option>Storage</option>
+      </select>
+      <select id="infra-filter-status" onchange="loadInfra()" style="width:130px">
+        <option value="">Alle Status</option>
+        <option>Aktiv</option><option>Wartung</option><option>Inaktiv</option><option>Kritisch</option>
+      </select>
+      <button class="btn primary sm" onclick="openInfraForm()">＋ Neues Item</button>
+    </div>
+  </div>
+
+  <!-- Summary cards by type -->
+  <div id="infra-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+  <!-- Main table -->
+  <div class="card" style="padding:0">
+    <table class="dt">
+      <thead><tr><th>ID</th><th>Name</th><th>Typ</th><th>Status</th><th>Umgebung</th><th>IP</th><th>Version</th><th>Owner</th><th>Offene Incidents</th><th></th></tr></thead>
+      <tbody id="infra-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Relations panel -->
+  <div class="card" style="margin-top:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="card-title" style="margin:0">Infra-Topologie · Verknüpfungen</div>
+      <button class="btn sm primary" onclick="openRelationForm()">＋ Neue Relation</button>
+    </div>
+    <table class="dt" id="infra-rel-table">
+      <thead><tr><th>Von</th><th>Relation</th><th>Nach</th><th>Notiz</th><th></th></tr></thead>
+      <tbody id="infra-rel-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- New Item Form (hidden by default) -->
+  <div id="infra-form" style="display:none">
+    <div class="card">
+      <div class="card-title">Neues Infrastruktur-Item</div>
+      <div class="row">
+        <div class="col-6">
+          <div class="fg"><label class="fl">ID <span class="req">*</span></label><input type="text" id="if-id" placeholder="z.B. SRV-03, FW-03"></div>
+          <div class="fg"><label class="fl">Name <span class="req">*</span></label><input type="text" id="if-name" placeholder="Bezeichnung"></div>
+          <div class="fg"><label class="fl">Typ <span class="req">*</span></label>
+            <select id="if-typ">
+              <option value="">— wählen —</option>
+              <option>Service</option><option>Firewall</option><option>Loadbalancer</option>
+              <option>Datenbank</option><option>Server</option><option>Monitoring</option>
+              <option>CI/CD</option><option>Netzwerk</option><option>Storage</option><option>Sonstiges</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Status</label>
+            <select id="if-status"><option>Aktiv</option><option>Wartung</option><option>Inaktiv</option><option>Kritisch</option></select>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="fg"><label class="fl">Umgebung</label>
+            <select id="if-umgebung"><option value="">—</option><option>Prod</option><option>Stage</option><option>Test</option><option>Dev</option></select>
+          </div>
+          <div class="fg"><label class="fl">IP-Adresse</label><input type="text" id="if-ip" placeholder="192.168.x.x"></div>
+          <div class="fg"><label class="fl">Version</label><input type="text" id="if-version" placeholder="z.B. 1.4.2"></div>
+          <div class="fg"><label class="fl">Owner</label><input type="text" id="if-owner" placeholder="Team oder Person"></div>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Beschreibung</label><textarea id="if-desc" rows="2"></textarea></div>
+      <div class="fg"><label class="fl">Log-Pfad (optional)</label><input type="text" id="if-log" placeholder="C:\...\logs\app.log" style="font-family:monospace;font-size:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="submitInfraItem()">Item speichern</button>
+        <button class="btn" onclick="document.getElementById('infra-form').style.display='none'">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Relation Form -->
+  <div id="infra-rel-form" style="display:none">
+    <div class="card">
+      <div class="card-title">Neue Infra-Relation</div>
+      <div class="row">
+        <div class="col-4"><div class="fg"><label class="fl">Von (Source) <span class="req">*</span></label><select id="ir-source" style="width:100%"></select></div></div>
+        <div class="col-4"><div class="fg"><label class="fl">Relation <span class="req">*</span></label>
+          <select id="ir-reltyp">
+            <option>schützt</option><option>routet zu</option><option>hostet</option>
+            <option>überwacht</option><option>hängt ab von</option><option>repliziert</option><option>verbindet</option>
+          </select>
+        </div></div>
+        <div class="col-4"><div class="fg"><label class="fl">Nach (Target) <span class="req">*</span></label><select id="ir-target" style="width:100%"></select></div></div>
+      </div>
+      <div class="fg"><label class="fl">Notiz</label><input type="text" id="ir-notiz" placeholder="Details zur Relation…"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="submitInfraRelation()">Relation speichern</button>
+        <button class="btn" onclick="document.getElementById('infra-rel-form').style.display='none'">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SCHULUNGSBEREICH ═══════════════════ -->
+<div id="page-schulung" class="page">
+  <div class="page-title">ITSM Schulungsbereich</div>
+  <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px">Lernmaterialien zu Incident Management, Release Management und diesem ITSM-Tool.</div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+
+    <!-- VIDEO 1 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="background:#1a1a1a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer" onclick="playVideo(1)">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.3)">
+          <span style="color:white;font-size:22px;margin-left:4px">▶</span>
+        </div>
+        <div style="position:absolute;bottom:10px;left:12px;color:white;font-size:10px;background:rgba(0,0,0,0.6);padding:2px 6px;border-radius:4px">18 min</div>
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#185FA5 0%,#0C447C 100%);opacity:0.85"></div>
+        <div style="position:absolute;font-size:32px;opacity:0.15;color:white">⚑</div>
+        <div style="position:absolute;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.3)">
+          <span style="color:white;font-size:22px;margin-left:4px">▶</span>
+        </div>
+      </div>
+      <div style="padding:14px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px">Incident Management — Grundlagen</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">Einführung in Incident Management: Lifecycle, Eskalation, SLA-Management und Major Incidents. Praxisbeispiele aus dem Betrieb.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="b bstd">ITIL 4, Cobit, VeriSM, FitSM</span>
+          <span class="b bopen">Grundlagen</span>
+          <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto;align-self:center">18 min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEO 2 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="background:#1a1a1a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer" onclick="playVideo(2)">
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#3B6D11 0%,#1a3a08 100%);opacity:0.85"></div>
+        <div style="position:absolute;font-size:32px;opacity:0.15;color:white">▷</div>
+        <div style="position:absolute;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.3)">
+          <span style="color:white;font-size:22px;margin-left:4px">▶</span>
+        </div>
+        <div style="position:absolute;bottom:10px;left:12px;color:white;font-size:10px;background:rgba(0,0,0,0.6);padding:2px 6px;border-radius:4px">22 min</div>
+      </div>
+      <div style="padding:14px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px">Release Management — Best Practices</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">Release-Lebenszyklus, Risikoklassifikation, CAB-Prozesse und Rollback-Strategien nach ITIL 4 und COBIT. Change Advisory Board in der Praxis.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="b bstd">ITIL 4</span>
+          <span class="b bok">COBIT</span>
+          <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto;align-self:center">22 min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIDEO 3 -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="background:#1a1a1a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer" onclick="playVideo(3)">
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#534AB7 0%,#2a2580 100%);opacity:0.85"></div>
+        <div style="position:absolute;font-size:32px;opacity:0.15;color:white">◉</div>
+        <div style="position:absolute;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.3)">
+          <span style="color:white;font-size:22px;margin-left:4px">▶</span>
+        </div>
+        <div style="position:absolute;bottom:10px;left:12px;color:white;font-size:10px;background:rgba(0,0,0,0.6);padding:2px 6px;border-radius:4px">15 min</div>
+      </div>
+      <div style="padding:14px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px">ITSM — Tool-Einführung</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">Vollständige Einführung in dieses ITSM-Tool: Incidents erfassen, Releases verwalten, Infrastruktur verknüpfen, Log-Monitor nutzen und KPIs interpretieren.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="b bstd">x</span>
+          <span class="b binprog">x</span>
+          <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto;align-self:center">15 min</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zusatzmaterial -->
+  <div class="card" style="margin-top:4px">
+    <div class="card-title">Zusatzmaterial & Referenzen</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+      <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="font-weight:500;margin-bottom:4px">📄 ITIL 4 Foundation</div>
+        <div style="color:var(--color-text-secondary)">Offizielle AXELOS-Dokumentation zu Service-Management-Praktiken und Incident/Change-Management.</div>
+      </div>
+      <div style="padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <div style="font-weight:500;margin-bottom:4px">📄 COBIT 2019</div>
+        <div style="color:var(--color-text-secondary)">IT-Governance-Framework mit Fokus auf Kontrollziele, Risikomanagement und Compliance.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Modal -->
+  <div id="video-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center" onclick="closeVideo()">
+    <div style="background:var(--color-background-primary);border-radius:var(--border-radius-lg);padding:20px;width:640px;max-width:90vw" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div id="video-modal-title" style="font-size:14px;font-weight:500"></div>
+        <span style="cursor:pointer;font-size:18px;color:var(--color-text-secondary)" onclick="closeVideo()">✕</span>
+      </div>
+      <div style="background:#000;aspect-ratio:16/9;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;color:white;font-size:13px;color:rgba(255,255,255,0.5)">
+        Video-Datei hier einbinden (MP4 / YouTube Embed)
+      </div>
+      <div id="video-modal-desc" style="font-size:12px;color:var(--color-text-secondary);margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #main -->
+</div><!-- #layout -->
+
+<!-- ═══════════════════ DETAIL PANEL ═══════════════════ -->
+<div id="dp">
+  <div class="dp-hdr">
+    <div class="dp-hdr-title" id="dp-title"></div>
+    <span class="dp-close" onclick="closeDP()">✕</span>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
+</div>
+
+<!-- ═══════════════════ TOAST ═══════════════════ -->
+<div id="toast"></div>
+
+<script>
+const API = "http://localhost:5051/api";
+let sinceLines = {};    // {logFile: lineCount}
+let autoRefreshTimer = null;
+let countdownTimer   = null;
+let countdownSecs    = 120;
+let autoActive       = false;
+let currentLogFile   = "";
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function prioBadge(p){ return p==='P1'?'bp1':p==='P2'?'bp2':'bp3'; }
+function statusBadge(s){ return s==='Offen'?'bopen':s==='In Bearbeitung'?'binprog':'bclosed'; }
+function codeCls(c){ if(c<300)return'c2xx';if(c<400)return'c3xx';if(c<500)return'c4xx';return'c5xx'; }
+function codeLabel(c){ if(c<300)return'2xx Erfolg';if(c<400)return'3xx Redirect';if(c<500)return'4xx Client';return'5xx Server'; }
+
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+async function api(method, path, body){
+  try{
+    const opts={method,headers:{'Content-Type':'application/json'}};
+    if(body) opts.body=JSON.stringify(body);
+    const r=await fetch(API+path,opts);
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||r.statusText);}
+    return await r.json();
+  }catch(e){
+    toast('⚠ API-Fehler: '+e.message);
+    throw e;
+  }
+}
+
+// ── DB STATUS ──────────────────────────────────────────────────────────────
+async function checkDB(){
+  const el=document.getElementById('db-status');
+  try{
+    await fetch(API+'/health');
+    el.textContent='⬤ SQLite verbunden';el.className='ok';
+  }catch{
+    el.textContent='⬤ Backend offline';el.className='err';
+    toast('⚠ Backend nicht erreichbar — starte: dotnet run');
+  }
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const n=document.getElementById('nav-'+id);if(n)n.classList.add('active');
+  if(id==='dashboard')    loadDashboard();
+  if(id==='incidents')    loadIncidents();
+  if(id==='releases')     loadReleases();
+  if(id==='rca')          {loadRCAList();loadIncidentSelect();}
+  if(id==='kpis')         loadKPIs();
+  if(id==='services')     loadServices();
+  if(id==='traceability') loadTraceability();
+  if(id==='infra')        loadInfra();
+  if(id==='new-incident') loadReleaseSelect();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────
+async function loadDashboard(){
+  document.getElementById('dash-spin').style.display='';
+  try{
+    const [incs, kpis, rels, upcoming] = await Promise.all([
+      api('GET','/incidents'),
+      api('GET','/kpis'),
+      api('GET','/releases'),
+      api('GET','/releases/upcoming?days=2').catch(()=>[]),
+    ]);
+    document.getElementById('kpi-p1').textContent   = kpis.open_p1;
+    document.getElementById('kpi-upcoming').textContent = upcoming.length||'0';
+    document.getElementById('kpi-upcoming-names').textContent =
+      upcoming.length ? upcoming.map(r=>r.name).join(', ') : 'keine in 2 Tagen';
+    document.getElementById('kpi-rel').textContent  = kpis.release_success_rate+'%';
+    document.getElementById('kpi-mttr').textContent = kpis.mttr_min+' min';
+
+    const badge=document.getElementById('alert-badge');
+    if(kpis.open_p1>0){badge.textContent=kpis.open_p1+' offene P1';badge.style.display='';}
+    else badge.style.display='none';
+
+    // top 5 incidents
+    document.getElementById('dash-incidents').innerHTML=incs.slice(0,5).map(i=>`
+      <tr class="clickable" onclick="openIncidentDP('${i.id}')">
+        <td style="font-size:11px;color:var(--color-text-tertiary)">${i.id}<\/td>
+        <td>${i.title}<\/td><td><span class="b ${prioBadge(i.prio)}">${i.prio}<\/span><\/td>
+        <td><span class="b ${statusBadge(i.status)}">${i.status}<\/span><\/td>
+        <td style="font-size:11px">${svcBadge(i.service)}<\/td>
+        <td style="font-size:11px">${i.sla||'—'}<\/td>
+      <\/tr>`).join('');
+
+    // bar chart
+    const bars=['P1','P2','P3'].map(p=>({p,cnt:incs.filter(i=>i.prio===p&&i.status!=='Gelöst').length}));
+    const maxCnt=Math.max(...bars.map(b=>b.cnt),1);
+    const colors={'P1':'#E24B4A','P2':'#EF9F27','P3':'#378ADD'};
+    document.getElementById('dash-bars').innerHTML=bars.map(b=>`
+      <div class="mini-bar-wrap">
+        <div class="mini-bar" style="height:${Math.round(b.cnt/maxCnt*65)+5}px;background:${colors[b.p]}"><\/div>
+        <div class="mini-bar-lbl">${b.p}<br>${b.cnt}<\/div>
+      <\/div>`).join('');
+
+    // next releases with dates
+    const upcoming5=rels.filter(r=>r.status!=='Abgeschlossen').slice(0,5);
+    const typCls={'Emergency':'bemrg','Normal':'bnorm','Standard':'bstd'};
+    document.getElementById('dash-releases').innerHTML=upcoming5.map(r=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary);gap:6px;cursor:pointer" onclick="openReleaseDP('${r.id}')">
+        <span style="font-size:12px;flex:1">${r.id}<\/span>
+        <span class="b ${typCls[r.typ]||'bstd'}">${r.typ}<\/span>
+        <span style="font-size:11px;color:var(--color-text-tertiary);min-width:70px;text-align:right">PROD: ${r.date_prod||'—'}<\/span>
+      <\/div>`).join('') || '<div style="color:var(--color-text-tertiary);font-size:12px;padding:6px 0">Keine offenen Releases<\/div>';
+
+  }catch(e){console.error(e);}
+  document.getElementById('dash-spin').style.display='none';
+}
+
+// ── INCIDENTS TABLE ─────────────────────────────────────────────────────────
+function svcBadge(svc){
+  if(!svc) return '—';
+  const col=svc==='Release Hub'?'#185FA5':svc==='Ops Center'?'#854F0B':'#534AB7';
+  const bg =svc==='Release Hub'?'#E6F1FB':svc==='Ops Center'?'#FAEEDA':'#EEEDFE';
+  return `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;background:${bg};color:${col};cursor:pointer" onclick="event.stopPropagation();filterAndShow('services','')">${svc}<\/span>`;
+}
+
+async function loadIncidents(){
+  document.getElementById('inc-spin').style.display='';
+  try{
+    const p=document.getElementById('f-prio').value;
+    const s=document.getElementById('f-status').value;
+    const svc=document.getElementById('f-service').value;
+    const q=document.getElementById('f-q').value;
+    const params=new URLSearchParams();
+    if(p)params.set('prio',p);if(s)params.set('status',s);if(q)params.set('q',q);
+    let incs=await api('GET','/incidents'+(params.toString()?'?'+params:''));
+    // client-side service filter
+    if(svc) incs=incs.filter(i=>i.service===svc);
+    document.getElementById('inc-tbody').innerHTML=incs.map(i=>`
+      <tr class="clickable" onclick="openIncidentDP('${i.id}')">
+        <td style="font-size:11px;color:var(--color-text-tertiary)">${i.id}<\/td>
+        <td>${i.title}<\/td>
+        <td><span class="b ${prioBadge(i.prio)}">${i.prio}<\/span><\/td>
+        <td><span class="b ${statusBadge(i.status)}">${i.status}<\/span><\/td>
+        <td>${svcBadge(i.service)}<\/td>
+        <td style="font-size:11px;color:var(--color-text-secondary)">${(i.owner||'').split('—')[0].trim()}<\/td>
+        <td style="font-size:11px">${i.sla||'—'}<\/td>
+        <td style="font-size:11px">${i.release_id?`<span style="color:#185FA5;cursor:pointer" onclick="event.stopPropagation();openReleaseDP('${i.release_id}')">${i.release_id}<\/span>`:'—'}<\/td>
+      <\/tr>`).join('');
+  }catch(e){}
+  document.getElementById('inc-spin').style.display='none';
+}
+
+// ── RELEASES TABLE ──────────────────────────────────────────────────────────
+async function loadReleases(){
+  try{
+    const rels=await api('GET','/releases');
+    const typCls={'Emergency':'bemrg','Normal':'bnorm','Standard':'bstd'};
+    const rkCls={'Hoch':'brh','Mittel':'brm','Niedrig':'brl'};
+    const stCls={'Abgeschlossen':'bclosed','Deployment':'binprog','In Review':'bopen','Freigegeben':'bok'};
+    document.getElementById('rel-tbody').innerHTML=rels.map(r=>`
+      <tr class="clickable" onclick="openReleaseDP('${r.id}')">
+        <td style="font-size:11px;color:var(--color-text-tertiary)">${r.id}<\/td>
+        <td style="font-size:12px">${r.name}<\/td>
+        <td><span class="b ${typCls[r.typ]||'bstd'}">${r.typ}<\/span><\/td>
+        <td><span class="b ${rkCls[r.risiko]||'brm'}">${r.risiko}<\/span><\/td>
+        <td><span class="b ${stCls[r.status]||'bopen'}">${r.status}<\/span><\/td>
+        <td>${svcBadge(r.services||'')}<\/td>
+        <td style="font-size:11px;color:var(--color-text-tertiary)">${r.date_test||'—'}<\/td>
+        <td style="font-size:11px;font-weight:500">${r.date_abnahme||'—'}<\/td>
+        <td style="font-size:11px;font-weight:500;color:${r.date_prod?'#185FA5':'var(--color-text-tertiary)'}">${r.date_prod||'—'}<\/td>
+        <td style="font-size:11px">${r.approver||'—'} <button class="btn sm" style="margin-left:4px" onclick="event.stopPropagation();loadRelHistory('${r.id}')">History<\/button><\/td>
+      <\/tr>`).join('');
+  }catch(e){}
+}
+
+async function loadRelHistory(id){
+  document.getElementById('rel-history-id').textContent=id;
+  document.getElementById('rel-history-panel').style.display='block';
+  document.getElementById('rel-history-list').innerHTML='<li style="font-size:12px;color:var(--color-text-tertiary)"><span class="spin"><\/span> Lade…<\/li>';
+  try{
+    const rows=await api('GET','/audit?entity_id='+id);
+    document.getElementById('rel-history-list').innerHTML=rows.length?rows.map(a=>`
+      <li><span class="tl-dot" style="background:#185FA5"><\/span>
+        <span class="tl-time">${(a.ts||'').substring(0,16).replace('T',' ')}<\/span>
+        <div class="tl-text">${a.action} — ${a.detail||''} <span style="color:var(--color-text-tertiary);font-size:10px">${a.actor}<\/span><\/div>
+      <\/li>`).join('')
+    :'<li style="font-size:12px;color:var(--color-text-tertiary);padding:6px 0">Noch keine History<\/li>';
+  }catch(e){}
+}
+
+function closeRelHistory(){
+  document.getElementById('rel-history-panel').style.display='none';
+}
+
+// ── DETAIL PANEL: INCIDENT ──────────────────────────────────────────────────
+async function openIncidentDP(id){
+  document.getElementById('dp-title').textContent=id;
+  document.getElementById('dp-body').innerHTML='<div style="padding:20px;text-align:center"><span class="spin"><\/span><\/div>';
+  document.getElementById('dp').classList.add('open');
+  try{
+    const inc=await api('GET','/incidents/'+id);
+    const auditRows=await api('GET','/audit?entity_id='+id);
+    document.getElementById('dp-title').textContent=inc.id+' · '+inc.prio;
+    document.getElementById('dp-body').innerHTML=`
+      <div style="margin-bottom:12px"><span class="b ${prioBadge(inc.prio)}">${inc.prio}<\/span> <span class="b ${statusBadge(inc.status)}">${inc.status}<\/span><\/div>
+      <div style="font-size:15px;font-weight:500;margin-bottom:12px">${inc.title}<\/div>
+      <div class="sh">Grunddaten · C3<\/div>
+      <div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+        <div><span style="color:var(--color-text-secondary)">Service<\/span><br><strong>${inc.service}<\/strong><\/div>
+        <div><span style="color:var(--color-text-secondary)">Kanal<\/span><br>${inc.channel||'—'}<\/div>
+        <div><span style="color:var(--color-text-secondary)">Erstellt<\/span><br>${(inc.created_at||'').substring(0,16).replace('T',' ')}<\/div>
+        <div><span style="color:var(--color-text-secondary)">Owner<\/span><br>${inc.owner}<\/div>
+      <\/div>
+      ${inc.description?`<div style="font-size:12px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px">${inc.description}<\/div>`:''}
+      <div class="sh">SLA · FA-IM-02<\/div>
+      <div style="font-size:12px;padding:8px;background:${inc.prio==='P1'?'#FCEBEB':'var(--color-background-secondary)'};border-radius:var(--border-radius-md);margin-bottom:12px;color:${inc.prio==='P1'?'#A32D2D':'var(--color-text-primary)'}">${inc.sla||'—'}<\/div>
+      <div class="sh">Traceability · C1<\/div>
+      <div class="trace-chain" style="font-size:11px">
+        <div class="tn" style="background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1">${inc.id}<\/div><span class="ta">↔<\/span>
+        <div class="tn" style="background:#E6F1FB;color:#185FA5;border-color:#B5D4F4">${inc.release_id||'kein Release'}<\/div><span class="ta">↔<\/span>
+        <div class="tn" style="background:#EAF3DE;color:#3B6D11;border-color:#C0DD97">${inc.service}<\/div>
+      <\/div>
+      <div class="sh" style="margin-top:12px">Audit-Log · C2 (aus SQLite)<\/div>
+      <ul class="tl">${auditRows.slice(0,5).map(a=>`
+        <li><span class="tl-dot" style="background:#185FA5"><\/span>
+          <span class="tl-time">${(a.ts||'').substring(0,16).replace('T',' ')}<\/span>
+          <div class="tl-text">${a.action} — ${a.detail||''}<\/div><\/li>`).join('')||'<li style="font-size:11px;color:var(--color-text-tertiary)">Keine Einträge<\/li>'}
+      <\/ul>
+      <div class="sh" style="margin-top:12px">Betroffene Infrastruktur<\/div>
+      <div id="dp-infra-links-${inc.id}" style="margin-bottom:10px"><span class="spin"><\/span><\/div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" onclick="updateIncStatus('${inc.id}','In Bearbeitung')">In Bearbeitung<\/button>
+        <button class="btn primary" onclick="updateIncStatus('${inc.id}','Gelöst')">Gelöst<\/button>
+        <button class="btn" onclick="toast('Eskalation ausgelöst — Service Manager benachrichtigt')">Eskalieren<\/button>
+        <button class="btn" onclick="openJiraLinkModal('incident','${inc.id}')">🔗 Jira<\/button>
+      <\/div>
+      ${jiraLinkHtml('incident', inc.id)}`;
+  }catch(e){}
+  // Load infra links async
+  api('GET','/infra/incident-links?incidentId='+id).then(links=>{
+    const el=document.getElementById('dp-infra-links-'+id);
+    if(!el)return;
+    el.innerHTML=links.length
+      ?links.map(l=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px;cursor:pointer" onclick="closeDP();openInfraDP('${l.infra_id}')">${infraBadge(l.infra_typ||'',l.infra_name||l.infra_id)}<\/span>`).join('')
+      +'<button class="btn sm" style="margin:2px" onclick="linkInfraToIncident(\''+id+'\')">＋ verknüpfen<\/button>'
+      :`<span style="font-size:12px;color:var(--color-text-tertiary)">Keine Verknüpfungen<\/span>
+       <button class="btn sm" style="margin-left:8px" onclick="linkInfraToIncident('${id}')">＋ verknüpfen<\/button>`;
+  }).catch(()=>{});
+}
+
+async function linkInfraToIncident(incidentId){
+  const items=allInfraItems.length?allInfraItems:await api('GET','/infra').catch(()=>[]);
+  const id=prompt('Infra-ID eingeben:\n'+items.map(i=>`${i.id} — ${i.name}`).join('\n'));
+  if(!id)return;
+  await api('POST','/infra/incident-links',{incident_id:incidentId,infra_id:id.trim(),notiz:''});
+  toast('✓ Verknüpfung gespeichert');
+  openIncidentDP(incidentId);
+}
+
+async function updateIncStatus(id, status){
+  await api('PUT','/incidents/'+id,{status});
+  toast('✓ Status auf "'+status+'" gesetzt · in SQLite gespeichert');
+  closeDP();
+  loadIncidents();loadDashboard();
+}
+
+// ── DETAIL PANEL: RELEASE ───────────────────────────────────────────────────
+async function openReleaseDP(id){
+  document.getElementById('dp-title').textContent=id;
+  document.getElementById('dp-body').innerHTML='<div style="padding:20px;text-align:center"><span class="spin"><\/span><\/div>';
+  document.getElementById('dp').classList.add('open');
+  try{
+    const r=await api('GET','/releases/'+id);
+    const typCls={'Emergency':'bemrg','Normal':'bnorm','Standard':'bstd'};
+    const rkCls={'Hoch':'brh','Mittel':'brm','Niedrig':'brl'};
+    const steps=['Erstellung','Risiko','Genehmigung','Einspielung','Post-Review'];
+    const stepIdx={'Offen':0,'In Review':2,'Deployment':3,'Freigegeben':2,'Abgeschlossen':4}[r.status]||0;
+    document.getElementById('dp-title').textContent=r.id+' · '+r.name;
+    document.getElementById('dp-body').innerHTML=`
+      <div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap">
+        <span class="b ${typCls[r.typ]||'bstd'}">${r.typ}<\/span>
+        <span class="b ${rkCls[r.risiko]||'brm'}">${r.risiko}<\/span>
+      <\/div>
+      <div class="sh">Deployment-Termine<\/div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;font-size:12px">
+        <div style="padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:center">
+          <div style="color:var(--color-text-tertiary);font-size:10px;margin-bottom:3px">Test<\/div>
+          <div style="font-weight:500">${r.date_test||'—'}<\/div>
+        <\/div>
+        <div style="padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:center">
+          <div style="color:var(--color-text-tertiary);font-size:10px;margin-bottom:3px">Abnahme<\/div>
+          <div style="font-weight:500">${r.date_abnahme||'—'}<\/div>
+        <\/div>
+        <div style="padding:8px;background:var(--color-background-info);border-radius:var(--border-radius-md);text-align:center">
+          <div style="color:var(--color-text-info);font-size:10px;margin-bottom:3px">PROD<\/div>
+          <div style="font-weight:500;color:var(--color-text-info)">${r.date_prod||'—'}<\/div>
+        <\/div>
+      <\/div>
+      <div class="sh">Release-Lebenszyklus<\/div>
+      <div class="steps" style="margin-bottom:12px">
+        ${steps.map((s,i)=>`<div class="step ${i<stepIdx?'done':i===stepIdx?'active':''}">${s}<\/div>`).join('')}
+      <\/div>
+      <div class="sh">Governance-Nachweis · C2 (SQLite Audit-Trail)<\/div>
+      <div style="font-size:12px;padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px">
+        <strong>Freigabe:<\/strong> ${r.approver||'ausstehend'}<br>
+        <strong>Zeitstempel:<\/strong> ${r.approve_date||'—'}<br>
+        <strong>Begründung:<\/strong> ${r.approve_reason||'—'}
+      <\/div>
+      <div class="sh">Planungsdaten<\/div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div style="padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px">Test<\/div>
+          <div style="font-size:13px;font-weight:500">${r.date_test||'—'}<\/div>
+        <\/div>
+        <div style="padding:8px;background:${r.date_abnahme?'var(--color-background-secondary)':'#FCEBEB'};border-radius:var(--border-radius-md);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px">Abnahme <span style="color:#A32D2D">*<\/span><\/div>
+          <div style="font-size:13px;font-weight:500;color:${r.date_abnahme?'var(--color-text-primary)':'#A32D2D'}">${r.date_abnahme||'⚠ fehlt'}<\/div>
+        <\/div>
+        <div style="padding:8px;background:${r.date_prod?'#E6F1FB':'#FCEBEB'};border-radius:var(--border-radius-md);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:2px">PROD <span style="color:#A32D2D">*<\/span><\/div>
+          <div style="font-size:13px;font-weight:500;color:${r.date_prod?'#185FA5':'#A32D2D'}">${r.date_prod||'⚠ fehlt'}<\/div>
+        <\/div>
+      <\/div>
+      <div class="sh">Release Notes · FA-RM-03<\/div>
+      <div style="font-size:12px;margin-bottom:6px">${r.notes||'—'}<\/div>
+      <div style="font-size:12px;margin-bottom:4px"><strong>Services:<\/strong> ${r.services||'—'}<\/div>
+      <div style="font-size:12px;margin-bottom:4px"><strong>Umgebung:<\/strong> ${r.environment||'—'}<\/div>
+      <div style="font-size:12px"><strong>Rollback-Plan:<\/strong> ${r.rollback||'—'}<\/div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" onclick="approveRelease('${r.id}')">Freigabe erteilen (→ SQLite)<\/button>
+        <button class="btn danger" onclick="toast('Ablehnung gespeichert')">Ablehnen<\/button>
+        <button class="btn" onclick="openJiraLinkModal('release','${r.id}')">🔗 Jira<\/button>
+      <\/div>
+      ${jiraLinkHtml('release', r.id)}
+      <div class="sh" style="margin-top:12px">Betroffene Infrastruktur<\/div>
+      <div id="dp-rel-infra-links-${r.id}" style="margin-bottom:10px"><span class="spin"><\/span><\/div>`;
+  }catch(e){}
+  // Load release infra links async
+  api('GET','/infra/release-links?releaseId='+id).then(links=>{
+    const el=document.getElementById('dp-rel-infra-links-'+id);
+    if(!el)return;
+    el.innerHTML=links.length
+      ?links.map(l=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px;cursor:pointer" onclick="closeDP();openInfraDP('${l.infra_id}')">${infraBadge(l.infra_typ||'',l.infra_name||l.infra_id)}<\/span>`).join('')
+      +'<button class="btn sm" style="margin:2px" onclick="linkInfraToRelease(\''+id+'\')">＋ verknüpfen<\/button>'
+      :`<span style="font-size:12px;color:var(--color-text-tertiary)">Keine Verknüpfungen<\/span>
+       <button class="btn sm" style="margin-left:8px" onclick="linkInfraToRelease('${id}')">＋ verknüpfen<\/button>`;
+  }).catch(()=>{});
+}
+
+async function linkInfraToRelease(releaseId){
+  const items=allInfraItems.length?allInfraItems:await api('GET','/infra').catch(()=>[]);
+  const id=prompt('Infra-ID eingeben:\n'+items.map(i=>`${i.id} — ${i.name}`).join('\n'));
+  if(!id)return;
+  await api('POST','/infra/release-links',{release_id:releaseId,infra_id:id.trim(),notiz:''});
+  toast('✓ Verknüpfung gespeichert');
+  openReleaseDP(releaseId);
+}
+
+async function approveRelease(id){
+  await api('POST','/releases/'+id+'/approve',{approver:'Anna Müller',reason:'Freigabe nach Review',status:'Freigegeben'});
+  toast('✓ Freigabe protokolliert mit Zeitstempel in SQLite (C2)');
+  closeDP();loadReleases();
+}
+
+function closeDP(){ document.getElementById('dp').classList.remove('open'); }
+
+// ── SUBMIT INCIDENT ─────────────────────────────────────────────────────────
+async function submitIncident(){
+  const t=document.getElementById('ni-title').value;
+  const p=document.getElementById('ni-prio').value;
+  const s=document.getElementById('ni-service').value;
+  const d=document.getElementById('ni-desc').value;
+  const o=document.getElementById('ni-owner').value;
+  if(!t||!p||!s||!d||!o){toast('⚠ Alle Pflichtfelder ausfüllen (NFA-01)');return;}
+  const btn=document.getElementById('ni-submit');btn.disabled=true;
+  try{
+    const newId='INC-'+(Date.now()%100000).toString().padStart(4,'0');
+    await api('POST','/incidents',{id:newId,title:t,prio:p,service:s,owner:o,description:d,channel:document.getElementById('ni-kanal').value,release_id:document.getElementById('ni-release').value});
+    toast('✓ '+newId+' in SQLite gespeichert · SLA-Uhr gestartet');
+    showPage('incidents');
+  }catch(e){}
+  btn.disabled=false;
+}
+
+// ── SUBMIT RELEASE ──────────────────────────────────────────────────────────
+async function submitRelease(){
+  const n=document.getElementById('nr-name').value;
+  const ty=document.getElementById('nr-type').value;
+  const ri=document.getElementById('nr-risk').value;
+  const no=document.getElementById('nr-notes').value;
+  const s=document.getElementById('nr-services').value;
+  const ro=document.getElementById('nr-rollback').value;
+  const da=document.getElementById('nr-date-abnahme').value;
+  const dp=document.getElementById('nr-date-prod').value;
+  if(!n||!ty||!ri||!no||!s||!ro||!da||!dp){toast('⚠ Pflichtfelder ausfüllen inkl. Abnahme- und PROD-Datum (FA-RM-03)');return;}
+  try{
+    const newId='REL-'+new Date().getFullYear()+'-'+(Date.now()%100).toString().padStart(2,'0');
+    await api('POST','/releases',{id:newId,name:n,typ:ty,risiko:ri,notes:no,services:s,rollback:ro,
+      test_evidence:document.getElementById('nr-test').value,
+      known_risks:document.getElementById('nr-risks').value,
+      date_test:document.getElementById('nr-date-test').value,
+      date_abnahme:da,date_prod:dp});
+    toast('✓ '+newId+' in SQLite gespeichert · PROD: '+dp+' · Workflow gestartet');
+    showPage('releases');
+  }catch(e){}
+}
+
+// ── SUBMIT RCA ──────────────────────────────────────────────────────────────
+async function submitRCA(){
+  const inc=document.getElementById('rca-inc').value;
+  const c=document.getElementById('rca-cause').value;
+  if(!inc||!c){toast('⚠ Incident und Root Cause pflichtend');return;}
+  const meth=document.getElementById('rm-5why').classList.contains('active')?'5why':'fish';
+  await api('POST','/problems',{incident_id:inc,root_cause:c,method:meth,why1:document.getElementById('why1').value,why2:document.getElementById('why2').value,why3:document.getElementById('why3').value,lessons:document.getElementById('rca-lessons').value});
+  toast('✓ RCA in SQLite gespeichert · alle Teams benachrichtigt (FA-PM-02)');
+  loadRCAList();
+}
+
+async function loadRCAList(){
+  document.getElementById('rca-spin').style.display='';
+  try{
+    const probs=await api('GET','/problems');
+    document.getElementById('rca-list').innerHTML=probs.length?probs.map(p=>`
+      <li><span class="tl-dot" style="background:${p.status==='Offen'?'#854F0B':'#3B6D11'}"><\/span>
+        <span class="tl-time">${(p.created_at||'').substring(0,10)}<\/span>
+        <div><div class="tl-text">${p.incident_id||'—'} — ${(p.root_cause||'').substring(0,40)}<\/div>
+          <div style="font-size:10px;color:var(--color-text-tertiary)">${p.method} · ${p.status}<\/div><\/div>
+      <\/li>`).join('')
+    :'<li style="font-size:12px;color:var(--color-text-tertiary);padding:6px 0">Noch keine RCAs<\/li>';
+  }catch(e){}
+  document.getElementById('rca-spin').style.display='none';
+}
+
+async function loadIncidentSelect(){
+  try{
+    const incs=await api('GET','/incidents?status=In Bearbeitung');
+    const sel=document.getElementById('rca-inc');
+    sel.innerHTML='<option value="">— wählen —<\/option>'+incs.map(i=>`<option value="${i.id}">${i.id} — ${i.title.substring(0,40)}<\/option>`).join('');
+  }catch(e){}
+}
+
+async function loadReleaseSelect(){
+  try{
+    const rels=await api('GET','/releases');
+    const sel=document.getElementById('ni-release');
+    sel.innerHTML='<option value="">— optional —<\/option>'+rels.map(r=>`<option value="${r.id}">${r.id} · ${r.name}<\/option>`).join('');
+  }catch(e){}
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────────────
+async function loadKPIs(){
+  try{
+    const kpis=await api('GET','/kpis');
+    document.getElementById('k-mttr').textContent=kpis.mttr_min+' min';
+    document.getElementById('k-sla').textContent=kpis.sla_erfuellung+'%';
+    document.getElementById('k-rel').textContent=kpis.release_success_rate+'%';
+    document.getElementById('k-rework').textContent=kpis.rework_rate+'%';
+    document.getElementById('k-handover').textContent=kpis.avg_handover;
+    const incs=[{p:'P1',c:kpis.open_p1,col:'#E24B4A'},{p:'P2',c:kpis.open_p2,col:'#EF9F27'},{p:'P3',c:kpis.open_p3,col:'#378ADD'}];
+    const maxC=Math.max(...incs.map(i=>i.c),1);
+    document.getElementById('kpi-prio-bars').innerHTML=incs.map(i=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)">
+        <span class="b ${prioBadge(i.p)}">${i.p}<\/span>
+        <div style="flex:1;height:6px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden"><div style="width:${Math.round(i.c/maxC*100)}%;height:100%;background:${i.col}"><\/div><\/div>
+        <span>${i.c}<\/span>
+      <\/div>`).join('');
+  }catch(e){}
+}
+
+// ── FORM HELPERS ─────────────────────────────────────────────────────────────
+function updateSLAHint(){
+  const hints={P1:'Kritisch — SLA 15 min · Auto-Eskalation (FA-IM-02)',P2:'Hoch — SLA 1h',P3:'Mittel — SLA 4h',P4:'Niedrig — SLA 8h'};
+  document.getElementById('sla-hint').textContent=hints[document.getElementById('ni-prio').value]||'';
+}
+function updateRelType(){
+  const hints={Standard:'Standard: 1-stufige Freigabe (Team Lead)',Normal:'Normal (CR): 2-stufige Freigabe',Emergency:'Emergency: sofort eskaliert, vollständig protokolliert'};
+  document.getElementById('nr-type-hint').textContent=hints[document.getElementById('nr-type').value]||'Bitte Typ wählen';
+}
+function setRCAType(t){document.getElementById('rt-normal').classList.toggle('active',t==='normal');document.getElementById('rt-major').classList.toggle('active',t==='major');}
+function setRCAMethod(m){
+  document.getElementById('rm-5why').classList.toggle('active',m==='5why');
+  document.getElementById('rm-fish').classList.toggle('active',m==='fish');
+  document.getElementById('rca-5why-block').style.display=m==='5why'?'block':'none';
+  document.getElementById('rca-fish-block').style.display=m==='fish'?'block':'none';
+}
+
+// ── LOG MONITOR ──────────────────────────────────────────────────────────────
+function setLogAlert(msg, type){
+  const el=document.getElementById('log-alert');
+  el.textContent=msg;el.className='log-alert show '+type;
+}
+
+async function parseLogs(reset){
+  const logFile=document.getElementById('log-path').value.trim();
+  if(!logFile){toast('⚠ Bitte Log-Pfad eingeben');return;}
+  currentLogFile=logFile;
+  if(reset) sinceLines[logFile]=0;
+  const since=sinceLines[logFile]||0;
+  try{
+    const data=await api('POST','/logs/parse',{log_file:logFile,since_line:since});
+    sinceLines[logFile]=data.since_line;
+    renderLogStats(data.stats, logFile);
+    renderLogRecent(data.recent);
+    renderLogFull(data.recent);
+    renderTimelineChart(data.recent);
+    document.getElementById('log-entry-count').textContent=`(${data.since_line} Zeilen total)`;
+    if(data.new_entries>0){
+      setLogAlert(`✓ ${data.new_entries} neue Einträge geparst (Zeile ${since}–${data.since_line})`, 'info');
+    } else {
+      setLogAlert('Keine neuen Einträge seit letztem Parse', 'info');
+    }
+    // alert on high 5xx
+    const stats=data.stats||{};
+    const err5xx=Object.entries(stats).filter(([k])=>parseInt(k)>=500).reduce((a,[,v])=>a+v.count,0);
+    if(err5xx>0) setLogAlert(`⚠ ${err5xx}x 5xx-Fehler erkannt — prüfen!`, 'danger');
+  }catch(e){}
+}
+
+function renderLogStats(stats, logFile){
+  const grouped={};
+  for(const [code,info] of Object.entries(stats)){
+    const c=parseInt(code);
+    if(c<100||c>=600) continue; // skip invalid codes
+    const grp=c<300?'2xx':c<400?'3xx':c<500?'4xx':'5xx';
+    if(!grouped[grp])grouped[grp]={count:0,codes:[]};
+    grouped[grp].count+=info.count;
+    grouped[grp].codes.push({code,count:info.count});
+  }
+
+  // individual code cards
+  const allCodes=Object.entries(stats).sort((a,b)=>parseInt(a[0])-parseInt(b[0]));
+  document.getElementById('code-grid').innerHTML=allCodes.map(([code,info])=>`
+    <div class="code-card ${codeCls(parseInt(code))}">
+      <div class="cc-code">${code}<\/div>
+      <div class="cc-count">${info.count}<\/div>
+      <div class="cc-label">${codeLabel(parseInt(code))}<\/div>
+    <\/div>`).join('')||'<div style="font-size:12px;color:var(--color-text-tertiary);padding:8px">Noch keine Daten<\/div>';
+
+  // group bar chart
+  const grpOrder=['2xx','3xx','4xx','5xx'];
+  const grpColors={'2xx':'#639922','3xx':'#185FA5','4xx':'#EF9F27','5xx':'#E24B4A'};
+  const maxGrp=Math.max(...grpOrder.map(g=>grouped[g]?.count||0),1);
+  document.getElementById('group-bars').innerHTML=grpOrder.map(g=>`
+    <div class="mini-bar-wrap">
+      <div class="mini-bar" style="height:${Math.round((grouped[g]?.count||0)/maxGrp*60)+4}px;background:${grpColors[g]}"><\/div>
+      <div class="mini-bar-lbl">${g}<br>${grouped[g]?.count||0}<\/div>
+    <\/div>`).join('');
+}
+
+function renderLogRecent(recent){
+  if(!recent||!recent.length){return;}
+  const codeColor={};
+  for(let i=100;i<600;i+=100){
+    const g=i<300?'#3B6D11':i<400?'#185FA5':i<500?'#854F0B':'#A32D2D';
+    for(let j=0;j<100;j++) codeColor[i+j]=g;
+  }
+  document.getElementById('log-recent').innerHTML=recent.slice(0,30).map(e=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:11px;font-family:monospace">
+      <span style="font-weight:500;color:${codeColor[e.http_code]||'#888'};min-width:32px">${e.http_code}<\/span>
+      <span style="color:var(--color-text-tertiary);min-width:50px">${e.method||'—'}<\/span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.path||'—'}<\/span>
+      <span style="color:var(--color-text-tertiary)">${e.ip||''}<\/span>
+    <\/div>`).join('');
+}
+
+function renderLogFull(entries){
+  if(!entries||!entries.length)return;
+  const codeColor={};
+  for(let c=100;c<600;c++) codeColor[c]=c<300?'#3B6D11':c<400?'#185FA5':c<500?'#854F0B':'#A32D2D';
+  document.getElementById('log-full-tbody').innerHTML=entries.map(e=>`
+    <tr>
+      <td><span style="font-weight:500;color:${codeColor[e.http_code]||'#888'}">${e.http_code}<\/span><\/td>
+      <td style="font-size:11px">${e.method||'—'}<\/td>
+      <td style="font-size:11px;font-family:monospace;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.path||'—'}<\/td>
+      <td style="font-size:11px;color:var(--color-text-tertiary)">${e.ip||'—'}<\/td>
+      <td style="font-size:11px;color:var(--color-text-tertiary)">${e.ts||'—'}<\/td>
+    <\/tr>`).join('');
+}
+
+// Auto-Refresh alle 2 Minuten
+function toggleAutoRefresh(){
+  const btn=document.getElementById('log-toggle');
+  if(autoActive){
+    clearInterval(autoRefreshTimer);clearInterval(countdownTimer);
+    autoActive=false;btn.textContent='▶ Auto (2 min)';
+    document.getElementById('countdown').textContent='—';
+  }else{
+    if(!document.getElementById('log-path').value.trim()){toast('⚠ Bitte Log-Pfad eingeben');return;}
+    autoActive=true;btn.textContent='■ Auto aktiv (stoppen)';
+    parseLogs(false);
+    countdownSecs=120;
+    countdownTimer=setInterval(()=>{
+      countdownSecs--;
+      document.getElementById('countdown').textContent=countdownSecs+'s';
+      if(countdownSecs<=0)countdownSecs=120;
+    },1000);
+    autoRefreshTimer=setInterval(()=>{parseLogs(false);countdownSecs=120;},120000);
+    toast('✓ Auto-Refresh aktiv — alle 2 Minuten');
+  }
+}
+
+// ── SERVICES PAGE ─────────────────────────────────────────────────────────────
+async function loadServices(){
+  try{
+    const [incs, rels] = await Promise.all([api('GET','/incidents'), api('GET','/releases')]);
+    const svc1Open=incs.filter(i=>i.service==='Release Hub'&&i.status!=='Gelöst').length;
+    const svc2Open=incs.filter(i=>i.service==='Ops Center'&&i.status!=='Gelöst').length;
+    const s1=document.getElementById('svc1-inc-count');
+    const s2=document.getElementById('svc2-inc-count');
+    if(s1) s1.innerHTML=svc1Open>0?`<span style="color:#A32D2D;font-weight:500">${svc1Open}<\/span>`:'<span style="color:#3B6D11">0<\/span>';
+    if(s2) s2.innerHTML=svc2Open>0?`<span style="color:#A32D2D;font-weight:500">${svc2Open}<\/span>`:'<span style="color:#3B6D11">0<\/span>';
+
+    // Build traceability summary table
+    const services=['Release Hub','Ops Center'];
+    const stCls={'Abgeschlossen':'bclosed','Deployment':'binprog','In Review':'bopen','Freigegeben':'bok','Offen':'bopen'};
+    document.getElementById('svc-inc-tbody').innerHTML=services.map(svc=>{
+      const svcIncs=incs.filter(i=>i.service===svc&&i.status!=='Gelöst').length;
+      const svcRels=rels.filter(r=>r.services&&r.services.includes(svc));
+      const lastRel=svcRels[0];
+      return `<tr>
+        <td>${svcBadge(svc)}<\/td>
+        <td>${svcIncs>0?`<span style="color:#A32D2D;font-weight:500">${svcIncs}<\/span>`:'<span style="color:#3B6D11">0<\/span>'}<\/td>
+        <td style="font-size:11px">${lastRel?lastRel.id:'—'}<\/td>
+        <td style="font-size:11px;font-weight:500;color:#185FA5">${lastRel?.date_prod||'—'}<\/td>
+        <td>${lastRel?`<span class="b ${stCls[lastRel.status]||'bopen'}">${lastRel.status}<\/span>`:'—'}<\/td>
+        <td><button class="btn sm" onclick="filterAndShow('incidents','${svc}')">Incidents<\/button> <button class="btn sm" onclick="filterAndShow('releases','${svc}')">Releases<\/button><\/td>
+      <\/tr>`;
+    }).join('');
+
+    // log stats
+    const stats=await api('GET','/logs/stats').catch(()=>null);
+    if(stats&&stats.length){
+      const renderStats=(arr,elId)=>{
+        const el=document.getElementById(elId);if(!el)return;
+        if(!arr.length){el.textContent='Noch keine Log-Daten';return;}
+        el.innerHTML=arr.map(s=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;margin-bottom:4px">
+          <span style="font-weight:500;color:${s.http_code<300?'#3B6D11':s.http_code<400?'#185FA5':s.http_code<500?'#854F0B':'#A32D2D'}">${s.http_code}<\/span>
+          <span style="color:var(--color-text-secondary)">×${s.count}<\/span><\/span>`).join('');
+      };
+      renderStats(stats.filter(s=>s.log_file&&s.log_file.includes('release_hub')),'svc1-stats');
+      renderStats(stats.filter(s=>s.log_file&&s.log_file.includes('ops_center')),'svc2-stats');
+    }
+  }catch(e){}
+}
+
+// Filter incidents or releases by service then navigate
+function filterAndShow(page, svc){
+  if(page==='incidents'){
+    showPage('incidents');
+    const sel=document.getElementById('f-service');
+    if(sel&&svc) sel.value=svc;
+    loadIncidents();
+  } else if(page==='releases'){
+    showPage('releases');
+    // highlight matching rows after load
+  }
+}
+
+// ── TRACEABILITY ──────────────────────────────────────────────────────────────
+async function loadTraceability(){
+  const mode=document.getElementById('tr-mode').value;
+  const filter=document.getElementById('tr-filter').value;
+  document.getElementById('tr-spin').style.display='';
+  try{
+    const [incs, rels] = await Promise.all([api('GET','/incidents'), api('GET','/releases')]);
+    let html='';
+    if(mode==='service'){
+      const services=[...new Set(incs.map(i=>i.service).filter(Boolean))];
+      const filtered=filter?services.filter(s=>s===filter):services;
+      html=filtered.map(svc=>{
+        const svcIncs=incs.filter(i=>i.service===svc);
+        const svcRels=rels.filter(r=>r.services&&r.services.includes(svc));
+        return `<div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            ${svcBadge(svc)}
+            <span style="font-size:11px;color:var(--color-text-tertiary)">${svcIncs.length} Incidents · ${svcRels.length} Releases<\/span>
+          <\/div>
+          <div class="row">
+            <div class="col-6">
+              <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">Verknüpfte Incidents<\/div>
+              ${svcIncs.length?svcIncs.map(i=>`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;font-size:12px" onclick="openIncidentDP('${i.id}')">
+                  <span class="b ${prioBadge(i.prio)}">${i.prio}<\/span>
+                  <span style="flex:1">${i.id}<\/span>
+                  <span class="b ${statusBadge(i.status)}">${i.status}<\/span>
+                  ${i.release_id?`<span style="font-size:10px;color:#185FA5">${i.release_id}<\/span>`:''}
+                <\/div>`).join('')
+              :'<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">Keine Incidents<\/div>'}
+            <\/div>
+            <div class="col-6">
+              <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">Verknüpfte Releases<\/div>
+              ${svcRels.length?svcRels.map(r=>`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;font-size:12px" onclick="openReleaseDP('${r.id}')">
+                  <span style="flex:1">${r.id} · ${r.name}<\/span>
+                  <span style="font-size:10px;color:#185FA5;min-width:60px">PROD: ${r.date_prod||'—'}<\/span>
+                <\/div>`).join('')
+              :'<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">Keine Releases<\/div>'}
+            <\/div>
+          <\/div>
+        <\/div>`;
+      }).join('');
+    } else {
+      // Per Incident view
+      const filtered=filter?incs.filter(i=>i.service===filter):incs;
+      html=`<div class="card" style="padding:0"><table class="dt">
+        <thead><tr><th>Incident<\/th><th>Prio<\/th><th>Status<\/th><th>Service<\/th><th>Verknüpfter Release<\/th><th>PROD-Datum<\/th><\/tr><\/thead>
+        <tbody>${filtered.map(i=>{
+          const rel=rels.find(r=>r.id===i.release_id);
+          return `<tr class="clickable" onclick="openIncidentDP('${i.id}')">
+            <td style="font-size:11px">${i.id}<\/td>
+            <td><span class="b ${prioBadge(i.prio)}">${i.prio}<\/span><\/td>
+            <td><span class="b ${statusBadge(i.status)}">${i.status}<\/span><\/td>
+            <td>${svcBadge(i.service)}<\/td>
+            <td style="font-size:11px">${i.release_id?`<span style="color:#185FA5;cursor:pointer" onclick="event.stopPropagation();openReleaseDP('${i.release_id}')">${i.release_id}<\/span>`:'—'}<\/td>
+            <td style="font-size:11px;color:#185FA5;font-weight:500">${rel?.date_prod||'—'}<\/td>
+          <\/tr>`;
+        }).join('')}<\/tbody>
+      <\/table><\/div>`;
+    }
+    document.getElementById('tr-content').innerHTML=html||'<div class="card" style="color:var(--color-text-tertiary);font-size:12px">Keine Daten gefunden<\/div>';
+    // update filter dropdown with available services
+    const services=[...new Set(incs.map(i=>i.service).filter(Boolean))];
+    const sel=document.getElementById('tr-filter');
+    const current=sel.value;
+    sel.innerHTML='<option value="">Alle<\/option>'+services.map(s=>`<option value="${s}" ${s===current?'selected':''}>${s}<\/option>`).join('');
+  }catch(e){}
+  document.getElementById('tr-spin').style.display='none';
+}
+
+// ── INFRASTRUKTUR ─────────────────────────────────────────────────────────────
+const INFRA_ICONS = {
+  'Service':'◈','Firewall':'⛨','Loadbalancer':'⇌','Datenbank':'◫',
+  'Server':'▣','Monitoring':'◉','CI/CD':'▷','Netzwerk':'⬡','Storage':'▤','Sonstiges':'◻'
+};
+const INFRA_COLORS = {
+  'Service':    {bg:'#E6F1FB',color:'#185FA5'},
+  'Firewall':   {bg:'#FCEBEB',color:'#A32D2D'},
+  'Loadbalancer':{bg:'#EAF3DE',color:'#3B6D11'},
+  'Datenbank':  {bg:'#EEEDFE',color:'#534AB7'},
+  'Server':     {bg:'#FAEEDA',color:'#854F0B'},
+  'Monitoring': {bg:'#E1F5EE',color:'#0F6E56'},
+  'CI/CD':      {bg:'#FAEEDA',color:'#854F0B'},
+  'Netzwerk':   {bg:'#E6F1FB',color:'#185FA5'},
+  'Storage':    {bg:'#F1EFE8',color:'#5F5E5A'},
+  'Sonstiges':  {bg:'var(--color-background-secondary)',color:'var(--color-text-secondary)'}
+};
+
+function infraBadge(typ, name){
+  const c=INFRA_COLORS[typ]||INFRA_COLORS['Sonstiges'];
+  const icon=INFRA_ICONS[typ]||'◻';
+  return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;background:${c.bg};color:${c.color}">${icon} ${name||typ}<\/span>`;
+}
+
+function statusDot(s){
+  const m={'Aktiv':'#3B6D11','Wartung':'#854F0B','Inaktiv':'#888780','Kritisch':'#A32D2D'};
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:${m[s]||'#888'}"><\/span>${s}<\/span>`;
+}
+
+let allInfraItems = [];
+
+async function loadInfra(){
+  try{
+    const typ=document.getElementById('infra-filter-typ').value;
+    const status=document.getElementById('infra-filter-status').value;
+    const params=new URLSearchParams();
+    if(typ)    params.set('typ',typ);
+    if(status) params.set('status',status);
+    const [items, relations, topo] = await Promise.all([
+      api('GET','/infra'+(params.toString()?'?'+params:'')),
+      api('GET','/infra/relations'),
+      api('GET','/infra/topology')
+    ]);
+    allInfraItems=items;
+
+    // Summary badges by type
+    const typCounts={};
+    items.forEach(i=>{ typCounts[i.typ]=(typCounts[i.typ]||0)+1; });
+    document.getElementById('infra-summary').innerHTML=
+      Object.entries(typCounts).map(([t,c])=>`
+        <div style="padding:6px 12px;border-radius:var(--border-radius-md);font-size:11px;font-weight:500;cursor:pointer;background:${INFRA_COLORS[t]?.bg||'var(--color-background-secondary)'};color:${INFRA_COLORS[t]?.color||'var(--color-text-secondary)'};" onclick="document.getElementById('infra-filter-typ').value='${t}';loadInfra()">
+          ${INFRA_ICONS[t]||'◻'} ${t} <span style="opacity:.7">(${c})<\/span>
+        <\/div>`).join('');
+
+    // Main table
+    const incCounts = topo.incident_counts||{};
+    document.getElementById('infra-tbody').innerHTML=items.map(i=>`
+      <tr class="clickable" onclick="openInfraDP('${i.id}')">
+        <td style="font-size:10px;color:var(--color-text-tertiary);font-family:monospace">${i.id}<\/td>
+        <td style="font-size:12px;font-weight:500">${i.name}<\/td>
+        <td>${infraBadge(i.typ, i.typ)}<\/td>
+        <td>${statusDot(i.status)}<\/td>
+        <td style="font-size:11px">${i.umgebung||'—'}<\/td>
+        <td style="font-size:10px;font-family:monospace;color:var(--color-text-tertiary)">${i.ip_adresse||'—'}<\/td>
+        <td style="font-size:11px">${i.version||'—'}<\/td>
+        <td style="font-size:11px;color:var(--color-text-secondary)">${(i.owner||'').split('—')[0].trim()}<\/td>
+        <td>${(incCounts[i.id]||0)>0?`<span style="color:#A32D2D;font-weight:500">${incCounts[i.id]}<\/span>`:'<span style="color:#3B6D11">0<\/span>'}<\/td>
+        <td><button class="btn sm" onclick="event.stopPropagation();deleteInfraItem('${i.id}','${i.name}')">🗑<\/button><\/td>
+      <\/tr>`).join('');
+
+    // Relations table
+    document.getElementById('infra-rel-tbody').innerHTML=relations.map(r=>`
+      <tr>
+        <td>${infraBadge(r.source_typ||'', r.source_name||r.source_id)}<\/td>
+        <td><span style="font-size:11px;color:var(--color-text-secondary);padding:2px 6px;background:var(--color-background-secondary);border-radius:6px">${r.rel_typ}<\/span><\/td>
+        <td>${infraBadge(r.target_typ||'', r.target_name||r.target_id)}<\/td>
+        <td style="font-size:11px;color:var(--color-text-tertiary)">${r.notiz||'—'}<\/td>
+        <td><button class="btn sm" onclick="deleteInfraRelation(${r.id})">✕<\/button><\/td>
+      <\/tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--color-text-tertiary);padding:12px;font-size:12px">Keine Relationen<\/td><\/tr>';
+
+    // Populate selects for new relation form
+    const opts = items.map(i=>`<option value="${i.id}">${i.name} (${i.typ})<\/option>`).join('');
+    document.getElementById('ir-source').innerHTML=opts;
+    document.getElementById('ir-target').innerHTML=opts;
+
+  }catch(e){console.error(e);}
+}
+
+async function openInfraDP(id){
+  document.getElementById('dp-title').textContent=id;
+  document.getElementById('dp-body').innerHTML='<div style="padding:20px;text-align:center"><span class="spin"><\/span><\/div>';
+  document.getElementById('dp').classList.add('open');
+  try{
+    const d=await api('GET','/infra/'+id);
+    const i=d.item;
+    document.getElementById('dp-title').textContent=i.name;
+    document.getElementById('dp-body').innerHTML=`
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${infraBadge(i.typ,i.typ)} ${statusDot(i.status)}
+        ${i.umgebung?`<span class="b bstd">${i.umgebung}<\/span>`:''}
+      <\/div>
+      <div style="font-size:15px;font-weight:500;margin-bottom:4px">${i.name}<\/div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:12px;font-family:monospace">${i.id}<\/div>
+      <div class="sh">Details<\/div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:12px">
+        <div><span style="color:var(--color-text-secondary)">IP<\/span><br><code style="font-size:11px">${i.ip_adresse||'—'}<\/code><\/div>
+        <div><span style="color:var(--color-text-secondary)">Version<\/span><br>${i.version||'—'}<\/div>
+        <div><span style="color:var(--color-text-secondary)">Owner<\/span><br>${i.owner||'—'}<\/div>
+        <div><span style="color:var(--color-text-secondary)">Umgebung<\/span><br>${i.umgebung||'—'}<\/div>
+      <\/div>
+      ${i.beschreibung?`<div style="font-size:12px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px">${i.beschreibung}<\/div>`:''}
+      ${i.log_pfad?`<div class="sh">Log-Pfad<\/div><div style="font-size:10px;font-family:monospace;padding:6px 8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);margin-bottom:12px;word-break:break-all">${i.log_pfad}<\/div>`:''}
+
+      <div class="sh">Topologie-Verknüpfungen (${d.relations.length})<\/div>
+      <div style="margin-bottom:12px">
+        ${d.relations.length?d.relations.map(r=>{
+          const isSource=r.source_id===id;
+          const other=isSource?r.target_name||r.target_id:r.source_name||r.source_id;
+          const otherTyp=isSource?r.target_typ||'':r.source_typ||'';
+          return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px">
+            ${isSource?`<span style="color:#185FA5;font-size:10px">→<\/span>`:`<span style="color:#854F0B;font-size:10px">←<\/span>`}
+            <span style="font-size:10px;padding:1px 6px;background:var(--color-background-secondary);border-radius:6px;color:var(--color-text-secondary)">${r.rel_typ}<\/span>
+            ${infraBadge(otherTyp,other)}
+            ${r.notiz?`<span style="font-size:10px;color:var(--color-text-tertiary)">${r.notiz}<\/span>`:''}
+          <\/div>`;}).join('')
+        :'<div style="font-size:12px;color:var(--color-text-tertiary)">Keine Relationen<\/div>'}
+      <\/div>
+
+      <div class="sh">Offene Incidents (${d.incidents.length})<\/div>
+      <div style="margin-bottom:12px">
+        ${d.incidents.length?d.incidents.map(inc=>`
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer" onclick="closeDP();openIncidentDP('${inc.id}')">
+            <span class="b ${prioBadge(inc.prio)}">${inc.prio}<\/span>
+            <span style="font-size:12px;flex:1">${inc.title}<\/span>
+            <span class="b ${statusBadge(inc.status)}">${inc.status}<\/span>
+          <\/div>`).join('')
+        :'<div style="font-size:12px;color:var(--color-text-tertiary)">Keine offenen Incidents ✓<\/div>'}
+      <\/div>
+
+      <div class="sh">Verknüpfte Releases (${d.releases.length})<\/div>
+      <div style="margin-bottom:12px">
+        ${d.releases.length?d.releases.map(r=>`
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;font-size:12px" onclick="closeDP();openReleaseDP('${r.id}')">
+            <span style="flex:1">${r.id} · ${r.name}<\/span>
+            <span style="color:#185FA5;font-size:11px">PROD: ${r.date_prod||'—'}<\/span>
+          <\/div>`).join('')
+        :'<div style="font-size:12px;color:var(--color-text-tertiary)">Keine Releases<\/div>'}
+      <\/div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${i.log_pfad?`<button class="btn sm primary" onclick="closeDP();showPage('logmonitor');document.getElementById('log-path').value='${i.log_pfad}';document.getElementById('log-preset').value='custom';">▤ Log öffnen<\/button>`:''}
+        <button class="btn sm" onclick="toast('Status-Update gespeichert')">Status ändern<\/button>
+      <\/div>`;
+  }catch(e){}
+}
+
+function openInfraForm(){
+  document.getElementById('infra-form').style.display='block';
+  document.getElementById('infra-form').scrollIntoView({behavior:'smooth'});
+}
+
+function openRelationForm(){
+  document.getElementById('infra-rel-form').style.display='block';
+  document.getElementById('infra-rel-form').scrollIntoView({behavior:'smooth'});
+}
+
+async function submitInfraItem(){
+  const id=document.getElementById('if-id').value.trim();
+  const name=document.getElementById('if-name').value.trim();
+  const typ=document.getElementById('if-typ').value;
+  if(!id||!name||!typ){toast('⚠ ID, Name und Typ sind Pflichtfelder');return;}
+  try{
+    await api('POST','/infra',{
+      id, name, typ,
+      status:  document.getElementById('if-status').value,
+      umgebung:document.getElementById('if-umgebung').value,
+      ip_adresse:document.getElementById('if-ip').value,
+      version: document.getElementById('if-version').value,
+      owner:   document.getElementById('if-owner').value,
+      beschreibung:document.getElementById('if-desc').value,
+      log_pfad:document.getElementById('if-log').value,
+    });
+    toast('✓ '+name+' in SQLite gespeichert');
+    document.getElementById('infra-form').style.display='none';
+    loadInfra();
+  }catch(e){}
+}
+
+async function submitInfraRelation(){
+  const src=document.getElementById('ir-source').value;
+  const tgt=document.getElementById('ir-target').value;
+  const rel=document.getElementById('ir-reltyp').value;
+  if(!src||!tgt||src===tgt){toast('⚠ Bitte zwei verschiedene Items wählen');return;}
+  try{
+    await api('POST','/infra/relations',{source_id:src,target_id:tgt,rel_typ:rel,notiz:document.getElementById('ir-notiz').value});
+    toast('✓ Relation gespeichert');
+    document.getElementById('infra-rel-form').style.display='none';
+    loadInfra();
+  }catch(e){}
+}
+
+async function deleteInfraItem(id, name){
+  if(!confirm(`"${name}" wirklich löschen? Alle Verknüpfungen werden ebenfalls entfernt.`))return;
+  await api('DELETE','/infra/'+id);
+  toast('✓ '+name+' gelöscht');
+  loadInfra();
+}
+
+async function deleteInfraRelation(id){
+  await api('DELETE','/infra/relations/'+id);
+  toast('✓ Relation entfernt');
+  loadInfra();
+}
+
+// ── PRESET LOG PATHS ─────────────────────────────────────────────────────────
+function applyPreset(){
+  const sel=document.getElementById('log-preset');
+  const inp=document.getElementById('log-path');
+  if(sel.value && sel.value!=='custom'){
+    inp.removeAttribute('readonly');
+    inp.value=sel.value;
+    inp.setAttribute('readonly','');
+  } else if(sel.value==='custom'){
+    inp.removeAttribute('readonly');
+    inp.value='';
+    inp.placeholder='Vollständigen Pfad eingeben…';
+  }
+}
+
+// ── TIMELINE CHART ───────────────────────────────────────────────────────────
+let timelineChart = null;
+
+async function renderTimelineChart(recent){
+  const empty = document.getElementById('log-timeline-empty');
+  const canvas = document.getElementById('log-timeline-chart');
+  if(!recent||!recent.length){ empty.style.display='block'; canvas.style.display='none'; return; }
+  empty.style.display='none'; canvas.style.display='block';
+
+  // Build 14-day window ending today
+  const today = new Date();
+  today.setHours(23,59,59,999);
+  const start = new Date(today);
+  start.setDate(start.getDate() - 13);
+  start.setHours(0,0,0,0);
+
+  // Generate all 14 day labels — fixed DD.MM format independent of locale
+  const labels = [];
+  const labelDates = [];
+  for(let d=new Date(start); d<=today; d.setDate(d.getDate()+1)){
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    labels.push(`${dd}.${mm}`);
+    labelDates.push(new Date(d));
+  }
+
+  // Parse log timestamps and bucket by day
+  const buckets = {};
+  labels.forEach(l => buckets[l] = {'2xx':0,'4xx':0,'5xx':0});
+
+  recent.forEach(e => {
+    if(!e.ts) return;
+    // Parse "14/Mar/2026 22:11:45" or "14/Mar/2026:22:11:45"
+    const raw = (e.ts||'').trim();
+    let date = null;
+    // Try format: DD/Mon/YYYY HH:MM:SS
+    const m1 = raw.match(/(\d{2})\/(\w{3})\/(\d{4})/);
+    if(m1){
+      const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+      date = new Date(parseInt(m1[3]), months[m1[2]]||0, parseInt(m1[1]));
+    }
+    if(!date||isNaN(date)) return;
+    if(date < start || date > today) return;
+
+    const dd = String(date.getDate()).padStart(2,'0');
+    const mm = String(date.getMonth()+1).padStart(2,'0');
+    const label = `${dd}.${mm}`;
+    if(!buckets[label]) return;
+    const c = e.http_code||0;
+    if(c>=200&&c<300) buckets[label]['2xx']++;
+    else if(c>=400&&c<500) buckets[label]['4xx']++;
+    else if(c>=500) buckets[label]['5xx']++;
+  });
+
+  const d2xx = labels.map(l => buckets[l]['2xx']);
+  const d4xx = labels.map(l => buckets[l]['4xx']);
+  const d5xx = labels.map(l => buckets[l]['5xx']);
+
+  // Get last 4 releases for vertical lines
+  let releaseAnnotations = [];
+  try{
+    const rels = await api('GET','/releases');
+    const relColors = ['#EF9F27','#185FA5','#639922','#E24B4A'];
+    releaseAnnotations = rels
+      .filter(r => r.date_prod)
+      .slice(0,4)
+      .map((r,i) => {
+        // date_prod is "14.03.2026" → extract "14.03"
+        const parts = (r.date_prod||'').split('.');
+        const label = parts.length>=2
+          ? parts[0].padStart(2,'0')+'.'+parts[1].padStart(2,'0')
+          : null;
+        return {id: r.id, label, color: relColors[i]};
+      })
+      .filter(r => r.label && labels.includes(r.label));
+  }catch(e){}
+
+  if(timelineChart) timelineChart.destroy();
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#888780' : '#888780';
+
+  timelineChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {label:'2xx Erfolg', data:d2xx, borderColor:'#639922', backgroundColor:'rgba(99,153,34,0.1)', tension:0.3, pointRadius:3, fill:true},
+        {label:'4xx Fehler', data:d4xx, borderColor:'#EF9F27', backgroundColor:'rgba(239,159,39,0.1)', tension:0.3, pointRadius:3, fill:true},
+        {label:'5xx Fehler', data:d5xx, borderColor:'#E24B4A', backgroundColor:'rgba(226,75,74,0.1)', tension:0.3, pointRadius:3, fill:true},
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'top',labels:{font:{size:11},color:textColor,boxWidth:12}},
+        tooltip:{backgroundColor:isDark?'#2a2a28':'#fff',titleColor:textColor,bodyColor:textColor,borderColor:gridColor,borderWidth:1},
+      },
+      scales:{
+        x:{ticks:{color:textColor,font:{size:10}},grid:{color:gridColor}},
+        y:{ticks:{color:textColor,font:{size:10}},grid:{color:gridColor},beginAtZero:true,title:{display:true,text:'Anzahl Requests',color:textColor,font:{size:10}}}
+      }
+    },
+    plugins:[{
+      id:'releaseLines',
+      afterDraw(chart){
+        if(!releaseAnnotations.length) return;
+        const ctx = chart.ctx;
+        const xAxis = chart.scales.x;
+        const yAxis = chart.scales.y;
+        releaseAnnotations.forEach(rel => {
+          const idx = chart.data.labels.indexOf(rel.label);
+          if(idx < 0) return;
+          const x = xAxis.getPixelForValue(idx);
+          ctx.save();
+          ctx.beginPath();
+          ctx.strokeStyle = rel.color || '#EF9F27';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5,4]);
+          ctx.moveTo(x, yAxis.top);
+          ctx.lineTo(x, yAxis.bottom);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = rel.color || '#EF9F27';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText(rel.id, x+4, yAxis.top+12);
+          ctx.restore();
+        });
+      }
+    }]
+  });
+}
+
+// ── JIRA LINKING ─────────────────────────────────────────────────────────────
+function openJiraLinkModal(entityType, entityId){
+  const existing = prompt(
+    `Jira-Ticket für ${entityId} verknüpfen:\n\nJira-Ticket-Nummer eingeben (z.B. PROJ-123):\n(Leer lassen zum Entfernen)`
+  );
+  if(existing===null) return; // cancelled
+  const key=existing.trim();
+  if(key){
+    toast(`✓ Jira-Ticket ${key} mit ${entityId} verknüpft`);
+    // Store in localStorage for demo
+    localStorage.setItem(`jira_${entityType}_${entityId}`, key);
+    // Refresh the panel
+    if(entityType==='incident') openIncidentDP(entityId);
+    else openReleaseDP(entityId);
+  } else {
+    localStorage.removeItem(`jira_${entityType}_${entityId}`);
+    toast(`Jira-Verknüpfung für ${entityId} entfernt`);
+  }
+}
+
+function getJiraTicket(entityType, entityId){
+  return localStorage.getItem(`jira_${entityType}_${entityId}`)||null;
+}
+
+function jiraLinkHtml(entityType, entityId){
+  const ticket=getJiraTicket(entityType,entityId);
+  if(ticket){
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#E6F1FB;border-radius:var(--border-radius-md);margin-bottom:10px;font-size:12px">
+      <span style="font-size:16px">🔗</span>
+      <span style="flex:1"><strong>Jira:</strong> <a href="https://jira.example.com/browse/${ticket}" target="_blank" style="color:#185FA5">${ticket}</a></span>
+      <button class="btn sm" onclick="openJiraLinkModal('${entityType}','${entityId}')">Ändern<\/button>
+    <\/div>`;
+  }
+  return `<button class="btn sm" style="margin-bottom:10px" onclick="openJiraLinkModal('${entityType}','${entityId}')">🔗 Jira-Ticket verknüpfen<\/button>`;
+}
+
+// ── VIDEO MODAL ───────────────────────────────────────────────────────────────
+const videoData=[
+  {title:'Incident Management — Grundlagen',desc:'ITIL 4 Incident Management: Lifecycle, Eskalation, SLA-Management und Major Incidents.'},
+  {title:'Release Management — Best Practices',desc:'Release-Lebenszyklus, Risikoklassifikation, CAB-Prozesse und Rollback-Strategien nach ITIL 4 und COBIT.'},
+  {title:'ITSM·Pro — Tool-Einführung',desc:'Vollständige Einführung: Incidents, Releases, Infrastruktur, Log-Monitor und KPIs.'},
+];
+function playVideo(n){
+  const v=videoData[n-1];
+  document.getElementById('video-modal-title').textContent=v.title;
+  document.getElementById('video-modal-desc').textContent=v.desc;
+  document.getElementById('video-modal').style.display='flex';
+}
+function closeVideo(){ document.getElementById('video-modal').style.display='none'; }
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+checkDB();
+loadDashboard();
+</script>
+</body>
+</html>
