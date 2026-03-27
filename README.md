@@ -1,3 +1,5 @@
+# Autor:    Manuel Houzar
+# Arbeit:   Masterarbeit
 # ITSM·Pro — ASP.NET Core 9 Backend
 
 DSR-Prototyp nach Hevner | ITIL 4 / COBIT | Dapper + SQLite
