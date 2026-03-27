@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ITSMPro</RootNamespace>
+    <AssemblyName>ITSMPro</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper"                        Version="2.1.35" />
+    <PackageReference Include="Microsoft.Data.Sqlite"         Version="9.0.4"  />
+    <PackageReference Include="Serilog.AspNetCore"            Version="9.0.0"  />
+    <PackageReference Include="Serilog.Sinks.Console"         Version="6.0.0"  />
+    <PackageReference Include="Serilog.Sinks.File"            Version="6.0.0"  />
+  </ItemGroup>
+
+  <!-- Backup-Ordner vom Compile ausschließen -->
+  <ItemGroup>
+    <Compile Remove="backup_files\**" />
+    <Compile Remove="backup_html\**" />
+  </ItemGroup>
+
+</Project>
